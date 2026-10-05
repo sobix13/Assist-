@@ -1,0 +1,23 @@
+name: Maestro checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install system dependency
+        run: sudo apt-get update && sudo apt-get install -y restic
+      - name: Install locked Python dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -r requirements-lock.txt
+      - name: Run integration and source checks
+        run: sudo env PYTHON="$PWD/.venv/bin/python" RESTIC_TEST_BINARY=/usr/bin/restic bash run_tests.sh
