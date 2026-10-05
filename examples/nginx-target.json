@@ -1,0 +1,14 @@
+{
+  "id": "nginx",
+  "unit": "nginx.service",
+  "enabled": true,
+  "expected_running": true,
+  "auto_restart": false,
+  "url": "",
+  "database": "",
+  "backup_dir": "",
+  "install": "",
+  "env_file": "",
+  "repo": "",
+  "revision": 0
+}
