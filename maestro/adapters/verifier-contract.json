@@ -1,0 +1,12 @@
+{
+  "repository": "sobix13/Verify-bot",
+  "version": "1.0.1",
+  "files": {
+    "ripcars_verifier/config.py": "43345aea3a76149a3c5ee761f206b945d3ac254c73224346632c34999b75bead",
+    "ripcars_verifier/storage.py": "3082b1f4d8fa20c06555556f23607bb9eecbd260409e5e8bfecd6aecd65f912f",
+    "ripcars_verifier/member_ui.py": "be624cf27b37e75b374ab0520fef4b3e7b7f4a0fe8ab4119307bb95cb3911c1d",
+    "ripcars_verifier/bot.py": "27364985b0b5430497fff18afec7b4e1a48c165d64172457f4ebeb39df28ba4b",
+    "ripcars_verifier/coordination.py": "5e9db33006acd1a264b3f030fbde36b5073f9ec7bd21f711234698664f05d51d",
+    "ripcars_verifier/engine.py": "90c90d682d2964a7043e8c8eab5a968ff2b328f5245f13d584fcfdf531dadfa9"
+  }
+}
