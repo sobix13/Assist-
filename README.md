@@ -58,7 +58,7 @@ Then open Discord `/maestro panel` and private Telegram `/start`. Review service
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Symptoms and practical diagnosis |
 | [RESEARCH.md](RESEARCH.md) | Requirements, alternatives, primary sources, retained repository findings |
 | [ACCEPTANCE.md](ACCEPTANCE.md) | Live VPS and chat acceptance steps |
-| [REPOSITORY.md](REPOSITORY.md) | Contents and readiness for a later user-supplied GitHub repository |
+| [REPOSITORY.md](REPOSITORY.md) | Repository contents, release checksums and GitHub clone installation |
 | [VALIDATION.json](VALIDATION.json) | Actual test evidence and unperformed production checks |
 
 ## Development and evidence
