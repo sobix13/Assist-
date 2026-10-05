@@ -1,0 +1,37 @@
+[Unit]
+Description=Maestro Telegram private owner interface
+Wants=network-online.target maestro-agent.service
+After=network-online.target maestro-agent.service
+ConditionPathExists=/etc/maestro/telegram.env
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=maestro-telegram
+Group=maestro
+UMask=0077
+WorkingDirectory=/opt/maestro/current
+EnvironmentFile=/etc/maestro/telegram.env
+ExecStart=/opt/maestro/current/.venv/bin/python -m maestro.telegram_bot
+Restart=on-failure
+RestartSec=8
+WatchdogSec=120
+TimeoutStartSec=180
+TimeoutStopSec=30
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+CapabilityBoundingSet=
+ReadWritePaths=/var/lib/maestro-telegram /run/maestro
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+permission,requirement,purpose
+View Channel,required,Owner channel and private interaction access
+Send Messages,required,Operational reports
+Embed Links,required,Admin panel
+Attach Files,required,Private job reports and encrypted backup
+Read Message History,required,Owner channel use
+Manage Channels,optional,Create maestro-ops during explicit owner setup
+Administrator,not required,No blanket Discord administration
+Manage Roles,not required,Maestro does not assign member roles
+Message Content intent,not required,Slash commands and attachments
+Server Members intent,not required,No bulk member collection

@@ -1,0 +1,116 @@
+{
+  "product": "Maestro",
+  "version": "1.0.0",
+  "built_utc": "2026-10-05T11:45:02Z",
+  "python_version": "3.12.14",
+  "unique_tests": 185,
+  "tests_passed": 185,
+  "tests_failed": 0,
+  "tests_skipped": 0,
+  "test_duration_seconds": 17.777,
+  "fresh_virtual_environment": {
+    "install": "passed",
+    "tests_passed": 185,
+    "stage_stamp": "STAGED_OK",
+    "executable_files_compared": 59
+  },
+  "source_checks": {
+    "python_compile": "passed",
+    "pyflakes": "passed",
+    "shell_syntax": "passed",
+    "english_script_scan": "passed",
+    "local_document_links": "passed",
+    "systemd_templates": {
+      "count": 4,
+      "syntax": "passed",
+      "exec_paths_substituted_for_local_check": true
+    }
+  },
+  "interfaces": {
+    "discord": "independent configured-guild interface",
+    "telegram": "independent private-chat interface",
+    "telegram_superadmin_default": 313342234,
+    "execution": "one shared broker and serialized mutation queue"
+  },
+  "real_local_execution": [
+    "Fresh locked dependency installation into an isolated Python virtual environment",
+    "Bash/Python subprocess jobs, stdin, EOF, timeout, cancellation, bounded full output",
+    "Separate agent process and authenticated pinned mutual-TLS request/reply lifecycle",
+    "SQLite online backups including committed WAL rows and restored integrity",
+    "Real Restic 0.16.4 encrypted temporary repository, snapshot, checks and verified export/full restore",
+    "Categorized ZIP packages built from real restored snapshot source/database exports",
+    "Loopback HTTP Telegram Bot API polling/callback/file/report fixtures",
+    "Loopback HTTP Discord REST Verifier permissions/provisioning/persistent-panel fixtures",
+    "Scoped delegate grants, expiry, revoke, isolation and forbidden-action rejection",
+    "Stable discovery, administrator-setting preservation and discovery while monitoring paused",
+    "Verifier contract/schema pins, setting revisions, ledger-mode guard and shared setup leases",
+    "Application failure rollback, restored reload, postcheck exceptions and unresolved rollback reporting",
+    "Owner identity links with separate confirmation and report acknowledgment scopes",
+    "Private archive staging, checksum validation, traversal/link/duplicate-path refusal",
+    "Repository process lock, interrupted-job preservation and non-replay behavior",
+    "External witness observations against a local TCP listener"
+  ],
+  "simulated_boundaries": [
+    "systemd/Docker state, restart, reload and writer-quiesce actions are fixture-driven",
+    "Discord SDK UI is constructed; gateway/interactions/delivery use fixtures",
+    "Telegram and Discord production services are replaced by actual loopback HTTP fixtures",
+    "Verifier 1.0.1 storage contract uses an isolated schema/data fixture, never production member data",
+    "Verifier activation worker-health gate is tested with controlled probe responses"
+  ],
+  "environment_limitations": [
+    "Cloud runtime restricts Unix-socket creation; actual local RPC lifecycle uses mutual TLS where needed",
+    "Cloud UID namespace maps only root; runner launch is tested to fail closed instead of falling back to root",
+    "Real VPS systemd manager/watchdog execution is unavailable in this environment"
+  ],
+  "production_not_performed": [
+    "Owner VPS connection and installation",
+    "Real Discord server/session and Telegram bot-token connection",
+    "VPS Unix peer credentials and mapped separate runner UID acceptance",
+    "Real installed application paths, provider credentials and effective Discord permissions",
+    "Off-host backup backend and coverage of every real database/mounted volume",
+    "Provider recovery or independent second-host outage acceptance",
+    "GitHub push or Actions execution: destination will be supplied by the owner later"
+  ],
+  "release_scope": {
+    "deterministic": true,
+    "ai_dependency": false,
+    "unknown_failures": "reported with evidence; no invented automatic fix",
+    "arbitrary_root_or_remote_effects": "no universal undo",
+    "database_discovery": "bounded roots/header scan; incomplete coverage stays visible",
+    "verifier_adapter_version": "1.0.1"
+  },
+  "suite_compatibility": {
+    "ok": true,
+    "protocol_sha256": "832e4fb447fd1fbadb9c309865cd2beecfe4679bec857d00deff50f0ddea8fbe",
+    "targets": [
+      {
+        "target": "gate",
+        "path": "../ripcars-gate-github-upload-20261003",
+        "ok": true,
+        "version": "1.0.2",
+        "protocol_sha256": "832e4fb447fd1fbadb9c309865cd2beecfe4679bec857d00deff50f0ddea8fbe"
+      },
+      {
+        "target": "crew",
+        "path": "../ripcars-crew-github-upload-20261003",
+        "ok": true,
+        "version": "1.0.1",
+        "protocol_sha256": "832e4fb447fd1fbadb9c309865cd2beecfe4679bec857d00deff50f0ddea8fbe"
+      },
+      {
+        "target": "raffle",
+        "path": "../ripcars-raffle-github-upload-20261003",
+        "ok": true,
+        "version": "1.0.1",
+        "protocol_sha256": "832e4fb447fd1fbadb9c309865cd2beecfe4679bec857d00deff50f0ddea8fbe"
+      },
+      {
+        "target": "verifier",
+        "path": "../ripcars-verifier",
+        "ok": true,
+        "version": "1.0.1",
+        "protocol_sha256": "832e4fb447fd1fbadb9c309865cd2beecfe4679bec857d00deff50f0ddea8fbe"
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+[Unit]
+Description=Maestro external reachability witness (second host only)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=maestro-external
+Group=maestro-external
+UMask=0077
+WorkingDirectory=/opt/maestro/current
+EnvironmentFile=/etc/maestro/external.env
+ExecStart=/opt/maestro/current/.venv/bin/python -m maestro.external_watcher
+Restart=on-failure
+RestartSec=30
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+CapabilityBoundingSet=
+ReadWritePaths=/var/lib/maestro-external
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+[Install]
+WantedBy=multi-user.target

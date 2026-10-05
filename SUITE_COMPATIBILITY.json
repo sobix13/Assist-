@@ -1,0 +1,34 @@
+{
+  "ok": true,
+  "protocol_sha256": "832e4fb447fd1fbadb9c309865cd2beecfe4679bec857d00deff50f0ddea8fbe",
+  "targets": [
+    {
+      "target": "gate",
+      "path": "../ripcars-gate-github-upload-20261003",
+      "ok": true,
+      "version": "1.0.2",
+      "protocol_sha256": "832e4fb447fd1fbadb9c309865cd2beecfe4679bec857d00deff50f0ddea8fbe"
+    },
+    {
+      "target": "crew",
+      "path": "../ripcars-crew-github-upload-20261003",
+      "ok": true,
+      "version": "1.0.1",
+      "protocol_sha256": "832e4fb447fd1fbadb9c309865cd2beecfe4679bec857d00deff50f0ddea8fbe"
+    },
+    {
+      "target": "raffle",
+      "path": "../ripcars-raffle-github-upload-20261003",
+      "ok": true,
+      "version": "1.0.1",
+      "protocol_sha256": "832e4fb447fd1fbadb9c309865cd2beecfe4679bec857d00deff50f0ddea8fbe"
+    },
+    {
+      "target": "verifier",
+      "path": "../ripcars-verifier",
+      "ok": true,
+      "version": "1.0.1",
+      "protocol_sha256": "832e4fb447fd1fbadb9c309865cd2beecfe4679bec857d00deff50f0ddea8fbe"
+    }
+  ]
+}

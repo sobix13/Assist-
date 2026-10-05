@@ -1,0 +1,31 @@
+[Unit]
+Description=Maestro local VPS agent
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=root
+Group=maestro
+UMask=0077
+WorkingDirectory=/opt/maestro/current
+ExecStart=/opt/maestro/current/.venv/bin/python -m maestro.agent
+RuntimeDirectory=maestro
+RuntimeDirectoryMode=0750
+Restart=on-failure
+RestartSec=8
+WatchdogSec=120
+TimeoutStartSec=60
+TimeoutStopSec=20
+KillMode=control-group
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+MemoryMax=768M
+TasksMax=128
+
+[Install]
+WantedBy=multi-user.target
