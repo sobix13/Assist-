@@ -11,9 +11,8 @@ from pathlib import Path
 
 from maestro.checkpoints import validate_config
 from maestro.delivery import binary_parts, job_attachments, text_parts
-from maestro.engine import Engine
 from maestro.security import Denied, Policy
-from .helpers import EngineCase, OWNER, OTHER, TOKEN
+from .helpers import EngineCase, OWNER, OTHER, TOKEN, fixture_engine
 
 TELEGRAM = 'telegram:345678901'
 
@@ -165,7 +164,7 @@ class CheckpointTests(EngineCase):
             subprocess.run([binary,'init'],env={'PATH':'/usr/bin:/bin','RESTIC_REPOSITORY':str(folder/'repo'),'RESTIC_PASSWORD':'integration-encryption-password','RESTIC_CACHE_DIR':str(folder/'cache')},stdout=subprocess.DEVNULL,check=True)
             cfg=folder/'backup.json';cfg.write_text(json.dumps({'coverage_reviewed':True,'paths':[str(app)],'env_file':str(env),'databases':[{'name':'application','kind':'sqlite','path':str(database)}]}));cfg.chmod(0o600)
             p=Policy({'owners':[OWNER],'frontends':[{'uid':os.getuid(),'token':TOKEN,'transport':'discord'}],'root_commands':True,'backup_config':str(cfg),'restic_binary':binary})
-            engine=Engine(p,folder/'state')
+            engine=fixture_engine(p,folder/'state')
             try:
                 preview=engine.prepare(OWNER,{'kind':'shell','payload':{'profile':'root','code':'printf real-backup-verified'}})
                 key=engine.confirm(OWNER,{k:preview[k] for k in ('id','token','digest')})['id'];await engine.jobs[key]

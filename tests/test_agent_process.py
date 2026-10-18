@@ -8,14 +8,14 @@ from pathlib import Path
 from maestro.ipc import Client
 from maestro.security import Denied, isolated_env
 from scripts.create_tls import generate
-from .helpers import EngineCase, OWNER, TOKEN, policy
+from .helpers import EngineCase, OWNER, TOKEN
 
 
 class AgentProcessTests(EngineCase):
     async def test_real_separate_agent_process_owner_job_and_shutdown(self):
         certs = self.folder / "certs"
         hashes = generate(certs)
-        config = policy().data
+        config = self.engine.policy.data.copy()
         config["frontends"][0]["certificate_sha256"] = hashes["client"]
         config["coordination_path"] = str(self.folder / "unused-registry.sqlite3")
         policy_path = self.folder / "policy.json"

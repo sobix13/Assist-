@@ -11,9 +11,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from maestro.delivery import job_attachments
-from maestro.engine import Engine
 from maestro.security import Denied, Policy
-from .helpers import EngineCase, OWNER, TOKEN
+from .helpers import EngineCase, OWNER, TOKEN, fixture_engine
 from .test_checkpoints_output import FakeRestic
 from maestro.inventory import scan_databases
 
@@ -95,7 +94,7 @@ class PackageTests(EngineCase):
             env=folder/'restic.env';env.write_text('RESTIC_REPOSITORY='+str(folder/'repo')+'\nRESTIC_PASSWORD=maestro-real-package-password\nRESTIC_CACHE_DIR='+str(folder/'cache')+'\n');env.chmod(0o600)
             subprocess.run([binary,'init'],env={'PATH':'/usr/bin:/bin','RESTIC_REPOSITORY':str(folder/'repo'),'RESTIC_PASSWORD':'maestro-real-package-password'},stdout=subprocess.DEVNULL,check=True)
             cfg=folder/'backup.json';cfg.write_text(json.dumps({'coverage_reviewed':True,'paths':[str(app)],'env_file':str(env),'databases':[{'name':'app','kind':'sqlite','path':str(db)}]}));cfg.chmod(0o600)
-            engine=Engine(Policy({'owners':[OWNER],'frontends':[{'uid':os.getuid(),'token':TOKEN,'transport':'discord'}],'root_commands':True,'restic_binary':binary,'backup_config':str(cfg)}),folder/'state')
+            engine=fixture_engine(Policy({'owners':[OWNER],'frontends':[{'uid':os.getuid(),'token':TOKEN,'transport':'discord'}],'root_commands':True,'restic_binary':binary,'backup_config':str(cfg)}),folder/'state')
             try:
                 target=engine.store.target('gate');target['install']=str(app);target['database']=str(db);engine.store.save_target(target)
                 review=await engine.dispatch(OWNER,'prepare',{'kind':'package','payload':{'target':'gate'}})

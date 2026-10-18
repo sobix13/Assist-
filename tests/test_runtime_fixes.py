@@ -5,10 +5,39 @@ from unittest.mock import AsyncMock, patch
 from maestro.checkpoints import RepositoryBusy
 from maestro.process import Result
 from maestro.security import Denied, read_env
-from .helpers import EngineCase, OWNER
+from .helpers import EngineCase, OWNER, fixture_engine, policy
 
 
 class RuntimeFixTests(EngineCase):
+    async def test_installer_fixture_excludes_real_install_paths_and_private_configuration(self):
+        from maestro.probes import suite_targets
+        targets = suite_targets()
+        installed = self.folder/'installed-crew';installed.mkdir()
+        (installed/'SUITE_TEST_RESULTS.txt').write_text('Host file outside the test snapshot')
+        next(t for t in targets if t['id'] == 'crew')['install'] = str(installed)
+        with patch('maestro.engine.suite_targets', return_value=targets):
+            engine = fixture_engine(policy(), self.folder/'isolated-state')
+        try:
+            self.assertEqual(engine.packages.plan('all')['files'], {})
+            self.assertEqual(engine.applications.all(), [])
+            self.assertEqual(engine.policy.data['secret_envs'], [])
+            for key in ('backup_config', 'applications_config', 'recipes_config', 'coordination_path'):
+                self.assertTrue(engine.policy.data[key].startswith(str(self.folder)+'/'))
+            self.assertEqual(engine.inventory.roots, [str(self.folder)])
+            self.assertEqual(engine.inventory.database_roots, [str(self.folder)])
+            self.assertTrue(all(not t['database'] or t['database'] == str(engine.store.path)
+                                for t in engine.store.targets()))
+        finally:
+            await engine.close()
+
+    async def test_fake_probe_runner_also_covers_inventory_commands(self):
+        real_runner = self.engine.runner
+        real_runner.run = AsyncMock(side_effect=AssertionError('Host command escaped fixture'))
+        fake = self.use_fake_probes()
+        await self.engine.inventory.collect()
+        real_runner.run.assert_not_awaited()
+        self.assertIn(['systemctl', 'list-units', '--all', '--type=service', '--no-pager', '--no-legend', '--plain'], fake.calls)
+
     async def test_unchanged_watch_history_is_compacted_but_transitions_and_hourly_reports_remain(self):
         report={'issues':[],'fields':{'ActiveState':'active','MainPID':'42'},'checks':{}}
         for _ in range(50):self.engine.record_snapshot('watch','gate',report)

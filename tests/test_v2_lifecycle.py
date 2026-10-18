@@ -10,10 +10,9 @@ import discord
 
 from maestro.checkpoints import Checkpoints
 from maestro.discord_ui import Panel
-from maestro.engine import Engine
 from maestro.security import Denied, Policy
 from maestro.store import DEFAULTS, Store
-from .helpers import EngineCase, OWNER, TOKEN
+from .helpers import EngineCase, OWNER, TOKEN, fixture_engine
 
 
 class V2LifecycleTests(EngineCase):
@@ -50,11 +49,11 @@ class V2LifecycleTests(EngineCase):
 
     async def test_interrupted_paused_checkpoint_is_reported_once_without_replaying_commands(self):
         self.engine.store.run('INSERT INTO backup_runs VALUES(?,?,?,?,?)',('b'*24,time.time(),'fixture','running',json.dumps({'stopped_units':['example.service']})))
-        await self.engine.close();self.engine=Engine(self.engine.policy,self.folder/'state')
+        await self.engine.close();self.engine=fixture_engine(self.engine.policy,self.folder/'state')
         queued=self.engine.store.events_for(OWNER)
         self.assertTrue(any(e['kind']=='checkpoint_review' for e in queued))
         count=len(queued)
-        await self.engine.close();self.engine=Engine(self.engine.policy,self.folder/'state')
+        await self.engine.close();self.engine=fixture_engine(self.engine.policy,self.folder/'state')
         self.assertEqual(len(self.engine.store.events_for(OWNER)),count)
         self.assertFalse(self.engine.jobs)
 
