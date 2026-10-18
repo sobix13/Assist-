@@ -12,6 +12,7 @@ from .files import MAX_UPLOAD
 from .runbooks import DIAGNOSTICS
 from .security import Denied
 from .delivery import binary_parts, job_attachments, text_parts
+from . import guides
 
 BRANCHES = {
     "setup": ("Setup & schedules", "Select a private report channel, discover installed services, then activate monitoring."),
@@ -71,6 +72,8 @@ async def authorize(bot, interaction):
 
 
 async def respond(i, text=None, **kwargs):
+    if kwargs.get("view") is None:
+        kwargs.pop("view", None)
     kwargs["ephemeral"] = True
     kwargs["allowed_mentions"] = discord.AllowedMentions.none()
     if i.response.is_done():
@@ -129,7 +132,7 @@ class OwnerView(discord.ui.View):
         return await authorize(self.bot, i)
 
     async def on_error(self, i, error, item):
-        await respond(i, "Operation failed: " + str(error)[:300])
+        await respond(i, guides.friendly_error(error))
 
 
 class OwnerModal(discord.ui.Modal):
@@ -141,7 +144,7 @@ class OwnerModal(discord.ui.Modal):
         return await authorize(self.bot, i)
 
     async def on_error(self, i, error):
-        await respond(i, "Operation failed: " + str(error)[:300])
+        await respond(i, guides.friendly_error(error))
 
 
 class AccessModal(OwnerModal):
@@ -191,16 +194,16 @@ class ConfirmView(OwnerView):
         super().__init__(bot)
         self.prepared = prepared
 
-    @discord.ui.button(label="Execute reviewed request", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="تأیید و اجرا", style=discord.ButtonStyle.danger)
     async def execute(self, i, button):
         await i.response.defer(ephemeral=True)
         result = await self.bot.api.call("confirm", id=self.prepared["id"], token=self.prepared["token"], digest=self.prepared["digest"])
         for item in self.children:
             item.disabled = True
         self.stop()
-        await respond(i, "Job queued: " + result["id"], view=JobView(self.bot, result["id"]))
+        await respond(i, "درخواست در صف قرار گرفت. برای دیدن مرحله بکاپ و نتیجه، وضعیت را تازه کن.", view=JobView(self.bot, result["id"],terminal=self.prepared.get('kind') in ('shell','file')))
 
-    @discord.ui.button(label="Discard", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="انصراف", style=discord.ButtonStyle.secondary)
     async def discard(self, i, button):
         await self.bot.api.call("discard", id=self.prepared["id"], token=self.prepared["token"])
         self.stop()
@@ -302,18 +305,21 @@ class InputModal(OwnerModal):
 
 
 class JobView(OwnerView):
-    def __init__(self, bot, key):
+    def __init__(self, bot, key, terminal=True, active=True):
         super().__init__(bot, timeout=900)
         self.key = key
+        if not terminal:
+            self.remove_item(self.stdin);self.remove_item(self.eof)
+        if not active:self.remove_item(self.cancel)
 
-    @discord.ui.button(label="Refresh output", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="تازه‌سازی وضعیت", style=discord.ButtonStyle.primary)
     async def refresh(self, i, button):
         await i.response.defer(ephemeral=True)
         result = await self.bot.api.call("job", id=self.key)
-        text = f"Job {self.key}\nState: {result['state']}\nExit code: {result['exit_code']}\n\n" + result["output"]
-        await show_text(i, text, "terminal-output.txt", JobView(self.bot, self.key))
+        text = guides.job_text(result)
+        await show_text(i, text, "terminal-output.txt", JobView(self.bot, self.key,terminal=result.get('kind') in ('shell','file'),active=result['state'] in ('running','queued')))
 
-    @discord.ui.button(label="Download full output", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="دانلود جزئیات", style=discord.ButtonStyle.primary)
     async def download(self, i, button):
         await i.response.defer(ephemeral=True)
         async for name, data in job_attachments(self.bot.api, self.key):
@@ -400,6 +406,11 @@ class Panel(OwnerView):
             await open_panel(bot, i, menu.values[0])
         menu.callback = navigate
         self.add_item(menu)
+        home=discord.ui.Button(label='صفحه اصلی',row=4)
+        async def go_home(i):
+            await i.response.defer(ephemeral=True)
+            await open_panel(bot,i,'home')
+        home.callback=go_home;self.add_item(home)
         actions = {
             "setup": [("Discover services", self.discover), ("Edit schedule", self.edit_settings), ("Activate / Pause", self.toggle)],
             "targets": [("Add target", self.add_target), ("Run hourly checks", self.check_hourly), ("Run daily checks", self.check_daily)],
@@ -589,11 +600,15 @@ class Panel(OwnerView):
         await i.response.send_modal(PackageModal(self.bot))
 
 
-async def open_panel(bot, i, section="setup"):
+async def open_panel(bot, i, section="home"):
     access = await bot.api.call('whoami')
     if access.get('role') not in ('superadmin', None):
         targets = await bot.api.call('targets')
         await respond(i, 'Maestro | '+access['role'].title()+'\nChoose an assigned service. Terminal, access management and backups belong to the superadmin.', view=DelegatePanel(bot, targets, access['role']))
+        return
+    if section=='home':
+        from .discord_guided import Context
+        await Context(bot,i).guided('g:home')
         return
     settings = await bot.api.call("settings")
     targets = await bot.api.call("targets")

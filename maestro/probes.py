@@ -82,12 +82,12 @@ def duration_seconds(value):
     return sum(float(n) * units[u] for n, u in re.findall(r"([0-9.]+)(us|ms|min|s|h|d)", str(value)))
 
 
-def database_check(path):
+def database_check(path, budget=3):
     target = Path(path)
     if not target.is_file():
         return {"ok": False, "detail": "Configured database is missing; no file was created."}
     db = sqlite3.connect(target.resolve().as_uri() + "?mode=ro", uri=True, timeout=2)
-    deadline = time.monotonic() + 3
+    deadline = time.monotonic() + budget
     db.set_progress_handler(lambda: int(time.monotonic() > deadline), 1000)
     try:
         rows = [r[0] for r in db.execute("PRAGMA quick_check(1)")]
@@ -201,16 +201,18 @@ class Probes:
             if not good:
                 issues.append({'code': 'worker_unhealthy', 'detail': 'Configured successful-work heartbeat is missing or stale.'})
         if daily:
-            for key, fn, args in (("database", database_check, (target.get("database"),)),
+            for key, fn, args in (("database", database_check, (target.get("database"),15 if target.get('id')=='maestro' else 3)),
                                   ("backup", backup_check, (target.get("backup_dir"), target.get("backup_max_hours", 36)))):
                 if args[0]:
                     try:
                         checked = await asyncio.to_thread(fn, *args)
                     except (OSError, ValueError, sqlite3.Error) as exc:
                         checked = {"ok": False, "detail": type(exc).__name__ + ": " + self.redactor.clean(exc)}
+                        if key == 'database' and isinstance(exc, sqlite3.OperationalError) and str(exc) == 'interrupted':
+                            checked['inconclusive'] = True
                     report["checks"][key] = checked
                     if not checked["ok"]:
-                        issues.append({"code": key + "_failed", "detail": checked["detail"]})
+                        issues.append({"code": 'database_review' if checked.get('inconclusive') else key + "_failed", "detail": checked["detail"]})
             if target.get("install"):
                 version = Path(target["install"]) / "VERSION"
                 report["checks"]["version"] = version.read_text().strip()[:100] if version.is_file() else "VERSION missing"

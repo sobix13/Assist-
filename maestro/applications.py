@@ -12,7 +12,9 @@ from pathlib import Path
 
 from .adapters import verifier_config as verifier
 from .checkpoints import file_hash, protected_json
-from .security import Denied, digest
+from .security import Denied, digest, read_env
+from . import suite
+from .guides import changed_fields
 
 
 def connect(path, readonly=True):
@@ -43,16 +45,33 @@ class Applications:
 
     def all(self):
         path=Path(self.policy.data.get('applications_config','/etc/maestro/applications.json'))
-        if not path.exists():return []
-        values=protected_json(path).get('adapters',[])
+        values=protected_json(path).get('adapters',[]) if path.exists() else []
         if not isinstance(values,list) or len(values)>100:raise Denied('Use at most 100 application adapters.')
         ids=set()
         for v in values:
             if not isinstance(v,dict) or not isinstance(v.get('id'),str) or not v['id'].isascii() or not v['id'].replace('-','').replace('_','').isalnum() or len(v['id'])>30 or v['id'] in ids:
                 raise Denied('Adapter IDs must be unique, short ASCII names.')
             ids.add(v['id'])
-            if v.get('kind') not in {'verifier-v1','jsonfile'} or not self.store.target(v.get('target')):
+            if v.get('kind') not in {'verifier-v1','jsonfile',*suite.CONFIG} or not self.store.target(v.get('target')):
                 raise Denied('Enroll a supported adapter kind and an existing target.')
+        # Fixed suite paths are the same ones shipped with the installer. Reading
+        # installed cards never creates a database or adopts Discord resources.
+        for key in ('gate','crew','raffle','verifier'):
+            target=self.store.target(key)
+            if key in ids or any(v.get('target')==key for v in values) or not target:
+                continue
+            install='/opt/ripcars-'+key+'/current'
+            database='/var/lib/ripcars-'+key+'/'+key+'.sqlite3'
+            env_file='/etc/ripcars-'+key+'.env'
+            if target.get('install')!=install or target.get('database')!=database or (key!='verifier' and not Path(database).is_file()) or not Path(env_file).is_file():
+                continue
+            env=read_env(env_file)
+            guild=env.get('GUILD_ID') or env.get('TEST_GUILD_ID','')
+            if not guild.isdecimal():
+                continue
+            values.append({'id':key,'target':key,'kind':key+'-v1','install':install,'database':database,
+                           'env_file':env_file,'guild':int(guild),
+                           'coordination_path':env.get('COORDINATION_PATH','/var/lib/ripcars-bots/coordination.sqlite3')})
         return values
 
     def spec(self, key):
@@ -74,10 +93,16 @@ class Applications:
             for name,expected in contract['files'].items():
                 p=root/name
                 if p.is_symlink() or file_hash(p)!=expected:raise Denied('Verifier contract changed: '+name+'. Writes are blocked.')
+        elif v['kind'] in suite.CONFIG:
+            verifier.discord_id(v.get('guild'))
+            suite.verify(v)
         return v
 
     def read(self, key):
         v=self.spec(key)
+        if v['kind']=='verifier-v1' and not Path(v['database']).exists():
+            return {'id':key,'kind':v['kind'],'target':v['target'],'settings':verifier.defaults(),
+                    'revision':0,'initialized':False,'contract_digest':digest(v)}
         if v['kind']=='verifier-v1':
             c=connect(v['database'])
             try:
@@ -86,6 +111,10 @@ class Applications:
                 cfg=json.loads(row['value']) if row else verifier.defaults()
                 verifier.validate(cfg)
                 revision=row['revision'] if row else 0
+            finally:c.close()
+        elif v['kind'] in suite.CONFIG:
+            c=connect(v['database'])
+            try:cfg,revision=suite.read(v,c)
             finally:c.close()
         else:
             path=Path(v['path'])
@@ -98,8 +127,9 @@ class Applications:
         current=self.read(payload.get('adapter'));v=self.spec(current['id'])
         if current['revision']!=payload.get('revision'):raise Denied('Application settings changed. Reopen the application panel.')
         action=payload.get('action','settings')
-        if action not in ('settings','provision','publish'):raise Denied('Choose settings, provision or publish.')
-        if action!='settings' and v['kind']!='verifier-v1':raise Denied('This adapter supports settings only.')
+        if action not in ('settings','provision','publish','raffle_create','raffle_publish'):raise Denied('Choose a supported application action.')
+        if action in ('provision','publish') and v['kind']!='verifier-v1':raise Denied('This adapter supports settings only. Publish its public panels through the native bot.')
+        if action.startswith('raffle_') and v['kind']!='raffle-v1':raise Denied('Choose the Waffle adapter.')
         cfg=copy.deepcopy(current['settings']);changes=payload.get('changes',{})
         if not isinstance(changes,dict):raise Denied('Send a JSON object containing fields to change.')
         if v['kind']=='verifier-v1':
@@ -112,6 +142,15 @@ class Applications:
                 modes={row[0] for row in c.execute("SELECT DISTINCT CASE WHEN event_id LIKE 'solana:%' THEN 'rpc' ELSE 'platform' END FROM ledger WHERE guild=?",(v['guild'],))}
                 if cfg['deposit_mode']!='off' and modes-{cfg['deposit_mode']}:raise Denied('The deposit ledger already uses another accounting mode. No automatic ledger migration is performed.')
             finally:c.close()
+        elif v['kind'] in suite.CONFIG:
+            if action.startswith('raffle_'):
+                c=connect(v['database'])
+                try:raffle=suite.raffle_plan(v,payload,cfg,c)
+                finally:c.close()
+            else:
+                if not changes or set(changes)-set(cfg):raise Denied('Choose existing application fields.')
+                cfg.update(copy.deepcopy(changes))
+                suite.validate(v,cfg)
         else:
             fields=v.get('fields',{})
             if not changes or set(changes)-set(fields):raise Denied('Only locally declared JSON fields are editable.')
@@ -123,7 +162,9 @@ class Applications:
                 if 'choices' in rule and val not in rule['choices']:raise Denied('Unsupported choice for '+k)
                 cfg[k]=val
         return {'adapter':current['id'],'action':action,'revision':current['revision'],'before_digest':digest(current['settings']),
-                'contract_digest':current['contract_digest'],'settings':cfg,'changes':changes}
+                'contract_digest':current['contract_digest'],'settings':cfg,'changes':changes,
+                'preview_changes':changes if action!='settings' else changed_fields(current['settings'],cfg),
+                **({'raffle':raffle} if action.startswith('raffle_') else {})}
 
     async def preflight(self, plan):
         spec=self.spec(plan['adapter'])
@@ -133,6 +174,13 @@ class Applications:
             from .verifier_bridge import VerifierBridge
             bridge=VerifierBridge(self,spec,plan)
             return await bridge.preflight()
+        if spec['kind'] in suite.CONFIG:
+            if plan['action'].startswith('raffle_'):
+                c=connect(spec['database'])
+                try:current=suite.raffle_plan(spec,plan,plan['settings'],c)
+                finally:c.close()
+                if current!=plan['raffle']:raise Denied('پیش‌نویس پس از تأیید تغییر کرده است. دوباره آن را باز کن.')
+            return {'ok':True,'target':spec['target'],'fields':sorted(plan['changes'])}
         if spec.get('validate_argv'):
             result=await self.runner.run(spec['validate_argv'],timeout=30)
             if result.code:raise Denied('The locally enrolled application preflight failed. No change was applied.')
@@ -159,6 +207,25 @@ class Applications:
     async def apply(self, plan, actor):
         before=self.read(plan['adapter']);spec=self.spec(plan['adapter'])
         await self.preflight(plan)
+        if spec['kind'] in suite.CONFIG:
+            if plan['action']=='raffle_publish':
+                return await suite.publish(self,spec,plan['raffle'])
+            c=connect(spec['database'],False)
+            try:
+                if plan['action']=='raffle_create':
+                    # One SQL transaction. Confirmed requests are single-use in the broker.
+                    c.execute('BEGIN IMMEDIATE')
+                    raffle=plan['raffle']
+                    rid=c.execute('INSERT INTO raffles(guild,actor,category,spec,created) VALUES(?,0,?,?,?)',
+                                  (spec['guild'],raffle['category'],json.dumps(raffle['spec']),time.time())).lastrowid
+                    c.execute("INSERT INTO audit(guild,actor,action,detail,at) VALUES(?,0,'maestro_draft',?,?)",(spec['guild'],actor,time.time()))
+                    c.commit()
+                    return {'state':'completed','raffle_id':rid,'status':'draft','verified':True,'next':'Review and publish the draft from the Waffle dashboard.'}
+                revision=suite.commit(spec,c,plan['settings'],plan['revision'],actor)
+            finally:c.close()
+            saved=self.read(plan['adapter'])
+            return {'state':'completed','revision':revision,'verified':saved['settings']==plan['settings'],
+                    'detail':'Settings saved. Existing public Gate/Crew messages need publication from their native panel.' if spec['kind']!='raffle-v1' else 'Waffle settings saved.'}
         if spec['kind']=='verifier-v1':
             from .verifier_bridge import VerifierBridge
             bridge=VerifierBridge(self,spec,plan)

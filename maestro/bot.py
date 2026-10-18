@@ -10,11 +10,13 @@ from pathlib import Path
 
 import discord
 
-from .discord_ui import Commands, event_text, owner_allowed, respond, validate_private_channel
+from .discord_ui import Commands, JobView, event_text, owner_allowed, respond, validate_private_channel
 from .ipc import ActorClient, Client
 from .security import Denied
 from .watchdog import notify
 from .delivery import job_attachments, text_parts
+from .notifications import enabled, incident_notifications, notification
+from . import guides
 
 log = logging.getLogger("maestro.discord")
 
@@ -36,6 +38,8 @@ class Maestro(discord.Client):
         self.tree.on_error = self.command_error
         self.tasks = []
         self.front_state = Path(env.get("FRONTEND_STATE", "/var/lib/maestro/frontend.json"))
+        self.report_state_path = self.front_state.with_name(self.front_state.stem + '-notifications.json')
+        self.report_state = json.loads(self.report_state_path.read_text()) if self.report_state_path.is_file() else {}
         self.last_channel = 0
         self.last_error_alert = 0
         self.delivery_tick = time.monotonic()
@@ -58,7 +62,7 @@ class Maestro(discord.Client):
             return
         original = getattr(error, "original", error)
         text = str(original)[:350] if isinstance(original, (Denied, ValueError, ConnectionError)) else type(original).__name__
-        await respond(i, "Operation failed: " + text + ". Check /maestro health or the VPS service journal.")
+        await respond(i, guides.friendly_error(text))
 
     def remember_channel(self, key):
         self.last_channel = key
@@ -89,6 +93,84 @@ class Maestro(discord.Client):
         # Delivery is at-least-once. An API outage between send and ack may repeat this report ID.
         await self.api.call("ack", id=event["id"])
 
+    def save_report_state(self):
+        self.report_state_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        temporary = self.report_state_path.with_suffix('.tmp')
+        temporary.write_text(json.dumps(self.report_state))
+        temporary.chmod(0o600)
+        temporary.replace(self.report_state_path)
+
+    async def send_notification(self, channel, message, job=None):
+        # Short automatic notices only. Full output stays behind owner-only controls.
+        if len(message) > 1900:
+            message = message[:1800] + '\nDetails: /maestro panel'
+        kwargs = {'allowed_mentions': discord.AllowedMentions.none()}
+        if job:
+            kwargs['view'] = JobView(self, job)
+        await channel.send(message, **kwargs)
+
+    async def deliver_quiet(self, channel, settings):
+        # Validate before sending OR acknowledging: an unsafe destination must
+        # leave its reports queued. Telegram delivery has a separate recipient.
+        validate_report_channel(channel, self.owner_id)
+        snapshot = await self.api.call('status')
+        now = time.time()
+        history = self.report_state.setdefault('incident_notifications_v2', {})
+        for message, key, record in incident_notifications(snapshot, history, now):
+            category = 'alerts' if record.get('announced_open') else 'recovery'
+            if not enabled(settings, category):
+                if category == 'recovery':
+                    history[key] = record
+                continue
+            await self.send_notification(channel, message)
+            history[key] = record
+            self.save_report_state()
+        self.report_state['incident_notifications_v2'] = {
+            key: record for key, record in history.items()
+            if record.get('announced_open') or now - record.get('seen_at', 0) < 7 * 86400}
+        self.save_report_state()
+        for event in await self.api.call('events'):
+            kind = event['kind']
+            if kind in ('incident_open', 'incident_resolved'):
+                await self.api.call('ack', id=event['id'])
+                continue
+            if kind in ('scheduled_report', 'job_finished') and now - event['at'] > 86400:
+                await self.api.call('ack', id=event['id'])
+                continue
+            result = notification(event, settings)
+            if result is not None:
+                message, key, cooldown = result
+                sent = self.report_state.setdefault('notification_sent', {})
+                if now - sent.get(key, 0) >= cooldown:
+                    job = event['payload']['id'] if kind == 'job_finished' else None
+                    await self.send_notification(channel, message, job)
+                    sent[key] = now
+                    self.report_state['notification_sent'] = dict(sorted(
+                        ((key, stamp) for key, stamp in sent.items() if now - stamp < 7 * 86400),
+                        key=lambda pair: pair[1])[-1024:])
+                    # Persist first: an ack failure or restart must not repeat a notice.
+                    self.save_report_state()
+            await self.api.call('ack', id=event['id'])
+
+    async def deliver_once(self):
+        settings = await self.api.call('settings')
+        if not settings.get('notify_discord', True):
+            for event in await self.api.call('events'):
+                await self.api.call('ack', id=event['id'])
+            return
+        key = settings['report_channel']
+        if key != self.last_channel:
+            self.remember_channel(key)
+        guild = self.get_guild(self.guild_id)
+        if key and guild:
+            channel = guild.get_channel(key)
+            if self.report_state.get('report_mode', 'alerts') == 'all' and all(settings.get('notify_'+category,True) for category in ('alerts','recovery','jobs','daily')):
+                validate_report_channel(channel, self.owner_id)
+                for event in await self.api.call('events'):
+                    await self.deliver_event(channel, event)
+            else:
+                await self.deliver_quiet(channel, settings)
+
     async def alert_owner(self, text):
         if time.time() - self.last_error_alert < 1800:
             return
@@ -101,16 +183,7 @@ class Maestro(discord.Client):
         while not self.is_closed():
             self.delivery_tick = time.monotonic()
             try:
-                settings = await self.api.call("settings")
-                key = settings["report_channel"]
-                if key != self.last_channel:
-                    self.remember_channel(key)
-                guild = self.get_guild(self.guild_id)
-                if key and guild:
-                    channel = guild.get_channel(key)
-                    validate_report_channel(channel, self.owner_id)
-                    for event in await self.api.call("events"):
-                        await self.deliver_event(channel, event)
+                await self.deliver_once()
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
