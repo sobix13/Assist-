@@ -2,6 +2,12 @@
 
 Scope: the owner-operated Maestro broker, Telegram and Discord interfaces, and the owned Rip Cars suite. Expected use is one VPS with linked owner interfaces and explicitly scoped delegates. Monitoring may cover hundreds of services; each application remains a separate controller.
 
+## Installer correction in 1.1.1
+
+The owner's VPS exposed a test-fixture defect that clean CI hosts did not reproduce: package tests inherited the installed Crew source path, while fake probe setup left the inventory object using its original host runner. Consequently a fake snapshot could not contain a real `SUITE_TEST_RESULTS.txt` and daily-monitor tests ran slow host discovery. The failed staging step did not activate the candidate release.
+
+Test engines now use temporary configuration, inventory and database roots, with private environment loading disabled and production target paths cleared on fresh fixture creation. Reopening a fixture preserves its explicit target edits. Inventory commands use the fake probe runner when selected. Native Restic integration tests still execute real encrypted snapshots and restores against their own fixtures. Two regressions cover an installed Crew source marker and attempted host-command escape. Runtime backup coverage and production settings are unchanged.
+
 ## Confirmed defects and fixes
 
 1. Original Discord response helpers forwarded `view=None` to sends. The shared response helper now removes absent views, preserving edit-message removal semantics.

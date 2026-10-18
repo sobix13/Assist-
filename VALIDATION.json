@@ -1,14 +1,14 @@
 {
   "product": "Maestro",
-  "version": "1.1.0",
-  "unique_tests": 256,
-  "tests_passed": 256,
+  "version": "1.1.1",
+  "unique_tests": 258,
+  "tests_passed": 258,
   "tests_failed": 0,
   "tests_skipped": 0,
-  "test_duration_seconds": 22.947,
+  "test_duration_seconds": 25.552,
   "fresh_virtual_environment": {
     "install": "passed",
-    "tests_passed": 256,
+    "tests_passed": 258,
     "stage_stamp": "STAGED_OK",
     "requirements": "requirements-lock.txt"
   },
@@ -30,7 +30,8 @@
     "Secret encryption before review, redaction, private environment writes and stale-file rejection",
     "Notification persistence, mute/re-enable, escalation, stable recovery and backlog suppression",
     "Blocked mutations after failed checkpoints and unchanged owner/delegate authorization",
-    "Inconclusive database classification, monitoring lock deferral and compact watch history"
+    "Inconclusive database classification, monitoring lock deferral and compact watch history",
+    "Installer fixture rejects inherited installed source paths and never sends inventory commands to the host runner"
   ],
   "production_not_performed": [
     "Installation or command execution on the owner's VPS",
