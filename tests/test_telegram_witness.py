@@ -76,7 +76,10 @@ class TelegramTests(EngineCase):
         self.assertEqual(commands['scope'],{'type':'chat','chat_id':TELEGRAM_ID})
         messages=[params for method,params in self.server.calls if method=='sendMessage']
         actions=[button['callback_data'] for row in messages[-1]['reply_markup']['inline_keyboard'] for button in row]
-        self.assertIn('section:inventory',actions);self.assertIn('section:terminal',actions);self.assertIn('section:data',actions)
+        self.assertEqual(set(actions),{'g:server','g:bots','jobs','g:help'})
+        await self.front.handle(callback('g:advanced'))
+        actions=[b['callback_data'] for row in self.server.calls[-1][1]['reply_markup']['inline_keyboard'] for b in row]
+        self.assertIn('section:inventory',actions);self.assertIn('section:terminal',actions)
         for method,params in self.server.calls:
             if method=='sendMessage':self.assertEqual(params['chat_id'],TELEGRAM_ID)
 
@@ -96,6 +99,8 @@ class TelegramTests(EngineCase):
         with self.assertRaises(Denied):await self.front.handle(callback('confirm:'+review_key,key=3))
         self.assertEqual(len(await self.engine.dispatch(TELEGRAM,'jobs',{})),1)
         await self.front.deliver_once()
+        self.assertFalse(self.server.documents)
+        await self.front.callback('output:'+jobs[0]['id'])
         self.assertTrue(any(b'from-telegram' in row['data'] for row in self.server.documents))
         self.assertTrue(self.engine.store.events_for(OWNER));self.assertEqual(self.engine.store.events_for(TELEGRAM),[])
 
@@ -126,7 +131,7 @@ class TelegramTests(EngineCase):
         self.server.error,self.server.status,self.server.retry=429,429,7
         with self.assertRaises(TelegramError) as context:await self.api.call('sendMessage',chat_id=TELEGRAM_ID,text='test')
         self.assertEqual(context.exception.retry_after,7)
-        self.engine._event('incident_open',{'target':'worker','code':'unit_down','detail':'failed'});self.front.state['started']=True
+        self.engine.incident('worker','unit_down','failed');self.front.state['started']=True
         with self.assertRaises(TelegramError):await self.front.deliver_once()
         self.assertTrue(self.engine.store.events_for(TELEGRAM))
 
