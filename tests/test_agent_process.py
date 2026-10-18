@@ -46,7 +46,7 @@ class AgentProcessTests(EngineCase):
                         break
                     await asyncio.sleep(.05)
             self.assertIsNotNone(status)
-            self.assertEqual(status["version"], "1.0.0")
+            self.assertEqual(status["version"], (Path(__file__).resolve().parents[1]/'VERSION').read_text().strip())
             review = await client.call("prepare", kind="shell", payload={"code": "printf separate-process-agent-ok", "profile": "root"})
             job = await client.call("confirm", **{k: review[k] for k in ("id", "token", "digest")})
             for _ in range(100):

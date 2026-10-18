@@ -3,6 +3,7 @@ import base64
 import os
 import socket
 import sys
+from pathlib import Path
 
 from maestro.ipc import AgentServer, Client
 from maestro.process import MAX_OUTPUT
@@ -130,7 +131,7 @@ class IPCTests(EngineCase):
 
     async def test_real_unix_socket_owner_roundtrip(self):
         status = await self.client.call("status")
-        self.assertEqual(status["version"], "1.0.0")
+        self.assertEqual(status["version"], (Path(__file__).resolve().parents[1]/'VERSION').read_text().strip())
         self.assertFalse(status["settings"]["enabled"])
 
     async def test_real_socket_rejects_wrong_credential(self):

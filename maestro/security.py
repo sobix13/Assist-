@@ -143,12 +143,13 @@ class Policy:
 
 def read_env(path):
     result = {}
-    for line in Path(path).read_text().splitlines():
+    for number,line in enumerate(Path(path).read_text().splitlines(),1):
         line = line.strip()
-        if line and not line.startswith("#"):
+        if line and not line.startswith(("#",";")):
             key, sep, value = line.partition("=")
-            if not sep or not re.fullmatch(r"[A-Z][A-Z0-9_]*", key):
-                raise Denied("Invalid environment file line.")
+            key=key.strip()
+            if not sep or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+                raise Denied("Invalid environment file line: " + str(path) + ":" + str(number))
             result[key] = value.strip().strip("\"'")
     return result
 

@@ -11,6 +11,7 @@ import re
 import secrets
 import signal
 import time
+from contextvars import ContextVar
 from pathlib import Path
 
 import aiohttp
@@ -19,8 +20,11 @@ from .delivery import binary_parts, job_attachments, text_parts
 from .discord_ui import event_text
 from .files import MAX_UPLOAD, safe_name
 from .ipc import Client
+from .notifications import enabled, notification, incident_notifications
 from .security import Denied, Redactor
 from .watchdog import notify
+from .guided import GuidedFlow
+from . import guides
 
 log = logging.getLogger('maestro.telegram')
 BRANCHES = {
@@ -64,6 +68,8 @@ class BotAPI:
             except ValueError:
                 raise TelegramError(response.status) from None
             if response.status != 200 or not result.get('ok'):
+                if method=='editMessageText' and result.get('error_code')==400 and 'message is not modified' in result.get('description','').lower():
+                    return True
                 raise TelegramError(result.get('error_code', response.status), min(3600, max(0, int(result.get('parameters', {}).get('retry_after', 0)))))
             return result['result']
 
@@ -100,7 +106,7 @@ class BotAPI:
             await self.session.close()
 
 
-class TelegramMaestro:
+class TelegramMaestro(GuidedFlow):
     def __init__(self, owner, agent, api, state_path):
         self.owner, self.agent, self.api = int(owner), agent, api
         self.path = Path(state_path)
@@ -114,6 +120,7 @@ class TelegramMaestro:
         self.sessions = {}
         self.access_info = {'role': 'superadmin'}
         self.last_access_refresh = 0
+        self.panel_message = ContextVar('maestro_panel_message',default=None)
 
     def save(self):
         tmp = self.path.with_suffix('.new')
@@ -147,6 +154,15 @@ class TelegramMaestro:
             params = {'chat_id': self.owner, 'text': value, 'link_preview_options': {'is_disabled': True}}
             if keyboard:
                 params['reply_markup'] = {'inline_keyboard': keyboard}
+            message_id=self.panel_message.get()
+            if message_id:
+                params.update(message_id=message_id,reply_markup={'inline_keyboard':keyboard or []})
+                try:
+                    await self.api.call('editMessageText',**params)
+                    return
+                except TelegramError as exc:
+                    if exc.code!=400:raise
+                    params.pop('message_id')
             await self.api.call('sendMessage', **params)
         else:
             # Reports are bounded by their backend query limits. Text parts remain readable.
@@ -165,16 +181,12 @@ class TelegramMaestro:
             await self.text('Maestro | '+self.access_info['role'].title()+'\nYour access is limited to assigned services. Choose a service to check it or read its logs.', rows)
             return
         if section == 'home':
-            buttons = [self.button(name, 'section:'+key) for key,(name,_) in BRANCHES.items()]
-            rows = [buttons[i:i+2] for i in range(0,len(buttons),2)]
-            if not self.state.get('wizard_complete'):
-                rows.insert(0,[self.button('Start setup wizard','wizard:identity')])
-            await self.text('Maestro | Personal control center\nChoose one section. Discord and Telegram share one operation queue and separate private sessions.', rows)
+            await self.guided('g:home')
             return
         label, guide = BRANCHES[section]
         rows = [[self.button('Home','home'),self.button('Guide','section:help')]]
         actions = {
-            'setup': [('Setup wizard','wizard:identity'),('Status','status'),('Activate / Pause','monitor'),('Edit schedule','settings_edit')],
+            'setup': [('Setup wizard','wizard:identity'),('Status','status'),('Activate / Pause','monitor'),('Edit schedule','settings_edit'),('Notifications','notifications')],
             'targets': [('List targets','targets:0'),('Add target','target_new'),('Hourly checks','check:hourly'),('Daily checks','check:daily')],
             'inventory': [('Scan host','inventory'),('Discover installed presets','discover')],
             'recovery': [('Automatic recovery on / off','recovery'),('Service action','service_prompt'),('Maintenance 1 hour','maintenance'),('Repair recipes','recipes')],
@@ -191,16 +203,19 @@ class TelegramMaestro:
 
     async def review(self, kind, payload):
         value = await self.agent.call('prepare', kind=kind, payload=payload)
+        await self.present_review(value,value.get('summary') or guides.review_text(kind,payload))
+
+    async def present_review(self, value, summary=None):
         key = secrets.token_hex(8)
         reviews = self.state['reviews']
         reviews.clear() if len(reviews)>=30 else None
         reviews[key] = {k: value[k] for k in ('id','token','digest','expires')}
         self.save()
-        await self.text('Review exact request\n'+value['preview']+'\n\nA verified checkpoint is required before execution. This review expires in five minutes.',
-            [[self.button('Confirm execution','confirm:'+key),self.button('Discard','discard:'+key)]], name='request-review.txt')
+        await self.text((summary or value['preview'])+'\n\nپیش از اجرا بکاپ ساخته و بررسی می‌شود. تأیید تا پنج دقیقه اعتبار دارد.',
+            [[self.button('تأیید و اجرا','confirm:'+key),self.button('انصراف','discard:'+key)]], name='request-review.txt')
 
     async def set_mode(self, name, **fields):
-        self.state['mode'] = {'name': name, **fields}
+        self.state['mode'] = {'name': name, 'at':time.time(), **fields}
         self.save()
 
     async def handle(self, update):
@@ -220,7 +235,10 @@ class TelegramMaestro:
         if 'callback_query' in update:
             callback = update['callback_query']
             await self.api.call('answerCallbackQuery', callback_query_id=callback['id'])
-            await self.callback(callback.get('data', ''))
+            data=callback.get('data','')
+            token=self.panel_message.set(callback['message'].get('message_id') if data.startswith('g:') else None)
+            try:await self.callback(data)
+            finally:self.panel_message.reset(token)
             return
         message = update['message']
         if message.get('document'):
@@ -234,13 +252,28 @@ class TelegramMaestro:
         elif self.state.get('mode'):
             await self.input(text)
         else:
-            await self.text('Open /panel, choose Terminal and paste your code. Plain chat text is never executed automatically.')
+            shortcuts={'قرعه‌کشی جدید':'g:raffle_new:raffle','رافل':'g:bot:raffle','بکاپ':'g:backup',
+                       'اعلان‌ها':'g:notifications','وضعیت سرور':'g:server','بات‌ها':'g:bots'}
+            if text.strip() in shortcuts and self.access_info.get('role')=='superadmin':
+                await self.guided(shortcuts[text.strip()])
+                return
+            await self.text('برای شروع /panel را بزن. از «بات‌های دیسکورد» بات موردنظر را انتخاب کن. هر فرم توضیح می‌دهد چه اطلاعاتی لازم است.',[[self.button('صفحه اصلی','g:home')]])
 
     async def callback(self, data):
+        if await self.guided(data):
+            return
         key, _, value = data.partition(':')
         if key == 'home':
             self.state['mode'] = None; self.save()
             await self.panel()
+        elif key == 'notifications':
+            await self.guided('g:notifications')
+        elif key == 'notify_mode':
+            if value not in ('alerts', 'all'):
+                raise Denied('Choose alerts or all.')
+            self.state['report_mode'] = value
+            self.save()
+            await self.text('Telegram notifications saved: ' + value + '. Monitoring and backups are unchanged.')
         elif key == 'wizard':
             await self.wizard(value)
         elif key == 'delegate_guide':
@@ -318,13 +351,19 @@ class TelegramMaestro:
             self.save()
             params = {k:review[k] for k in ('id','token','digest')}
             result = await self.agent.call(key, **params)
-            await self.text(json.dumps(result, indent=2), [[self.button('Recent jobs','jobs')]])
+            await self.text('درخواست در صف قرار گرفت. وضعیت بکاپ و نتیجه را از دکمه زیر ببین.' if key=='confirm' else 'درخواست کنار گذاشته شد.',
+                [[self.button('دیدن نتیجه','job:'+result['id'])]] if key=='confirm' else [[self.button('صفحه اصلی','g:home')]])
         elif key in ('status','inventory','discover','coverage','checkpoints','export','jobs','uploads','recipes'):
             action = {'coverage':'checkpoint_status'}.get(key,key)
             result = await self.agent.call(action)
             rows = []
             if key == 'jobs':
                 rows = [[self.button(row['id'][:8]+' '+row['state'],'job:'+row['id'])] for row in result[:15]]
+                await self.text('کارهای من\nیک کار را برای دیدن مرحله فعلی و نتیجه انتخاب کن.' if result else 'هنوز کاری ثبت نشده است.',rows+[[self.button('صفحه اصلی','g:home')]])
+                return
+            elif key == 'checkpoints':
+                await self.text('بکاپ‌های قبلی\n'+('\n'.join(r['id'][:8]+': '+r['state'] for r in result) or 'هنوز بکاپی ثبت نشده است.'),[[self.button('بکاپ‌ها','g:backup')]])
+                return
             elif key == 'uploads':
                 rows = [[self.button(row['source_name'][:40],'upload:'+row['id'])] for row in result[:15]]
             elif key == 'recipes':
@@ -368,7 +407,7 @@ class TelegramMaestro:
                 rows += [[self.button('Start','target_action:start:'+value),self.button('Stop','target_action:stop:'+value),self.button('Restart','target_action:restart:'+value)]]
             if self.access_info.get('role') == 'superadmin':
                 rows += [[self.button('Edit monitoring','target_edit:'+value),self.button('ZIP backup','package:'+value)]]
-            await self.text('Maestro | '+value+'\n'+json.dumps(result,indent=2),rows+[[self.button('Services','targets:0'),self.button('Home','home')]])
+            await self.text('Maestro | '+value+'\n'+guides.health_text(result),rows+[[self.button('Services','targets:0'),self.button('Home','home')]])
         elif key == 'target_logs':
             await self.text((await self.agent.call('logs',target=value))['output'],name=value+'-logs.txt')
         elif key == 'target_action':
@@ -415,6 +454,8 @@ class TelegramMaestro:
             raise Denied('Unknown or outdated panel action. Open /panel again.')
 
     async def input(self, text):
+        if await self.guided_input(text):
+            return
         mode = self.state.get('mode') or {}
         kind = mode.get('name')
         if kind == 'grant_id':
@@ -571,10 +612,13 @@ class TelegramMaestro:
 
     async def show_job(self, key):
         row = await self.agent.call('job',id=key)
-        await self.text(json.dumps(row,indent=2),[
-            [self.button('Refresh','job:'+key), self.button('Download output','output:'+key)],
-            [self.button('Send input','stdin:'+key),self.button('Close stdin','eof:'+key)],
-            [self.button('Cancel job','stopjob:'+key)]], name='job-status.json')
+        buttons=[[self.button('تازه‌سازی وضعیت','job:'+key),self.button('دانلود جزئیات','output:'+key)]]
+        if row['state'] in ('running','queued'):
+            if row.get('kind') in ('shell','file'):
+                buttons.append([self.button('ارسال ورودی فنی','stdin:'+key),self.button('پایان ورودی','eof:'+key)])
+            buttons.append([self.button('لغو کار','stopjob:'+key)])
+        buttons.append([self.button('بات‌های دیسکورد','g:bots'),self.button('صفحه اصلی','g:home')])
+        await self.text(guides.job_text(row),buttons,name='job-status.json')
 
     async def poll_once(self, enqueue=None):
         updates = await self.api.call('getUpdates',offset=self.state['offset'],timeout=25,allowed_updates=['message','callback_query'])
@@ -596,7 +640,7 @@ class TelegramMaestro:
                 await self.handle(update)
             except (Denied, ValueError, KeyError, TypeError, ConnectionError, OSError) as exc:
                 if self.authorized(update):
-                    await self.text('Operation failed: '+self.redactor.clean(exc)[:350]+'. Check /health and job history before retrying execution.')
+                        await self.text(guides.friendly_error(self.redactor.clean(exc)))
 
     async def deliver_once(self):
         self.delivery_tick = time.monotonic()
@@ -605,7 +649,56 @@ class TelegramMaestro:
         settings = await self.agent.call('settings')
         if not settings['telegram_reports']:
             return
+        if not settings.get('notify_telegram', True):
+            for event in await self.agent.call('events'):
+                await self.agent.call('ack', id=event['id'])
+            return
+        quiet=self.state.get('report_mode', 'alerts') != 'all' or not all(settings.get('notify_'+category,True) for category in ('alerts','recovery','jobs','daily'))
+        if quiet:
+            # The broker's current incidents are authoritative. Old queued
+            # ALERT/RESOLVED transitions cannot describe the current service.
+            snapshot = await self.agent.call('status')
+            now = time.time()
+            history = self.state.setdefault('incident_notifications_v2', {})
+            for message, key, record in incident_notifications(snapshot, history, now):
+                category = 'alerts' if record.get('announced_open') else 'recovery'
+                if not enabled(settings, category):
+                    if category == 'recovery':
+                        history[key] = record
+                    continue
+                await self.text(message)
+                history[key] = record
+                self.save()
+            self.state['incident_notifications_v2'] = {
+                key: row for key, row in history.items()
+                if row.get('announced_open') or now - row.get('seen_at', 0) < 7 * 86400}
+            self.save()
         for event in await self.agent.call('events'):
+            if quiet:
+                if event['kind'] in ('incident_open', 'incident_resolved'):
+                    await self.agent.call('ack', id=event['id'])
+                    continue
+                if event['kind'] in ('scheduled_report', 'job_finished') and time.time() - event['at'] > 86400:
+                    await self.agent.call('ack', id=event['id'])
+                    continue
+                result = notification(event, settings)
+                if result is not None:
+                    message, key, cooldown = result
+                    now = time.time()
+                    sent = self.state.setdefault('notification_sent', {})
+                    if now - sent.get(key, 0) >= cooldown:
+                        keyboard = None
+                        if event['kind'] == 'job_finished':
+                            keyboard = [[self.button('View result', 'job:' + event['payload']['id'])]]
+                        await self.text(message, keyboard)
+                        sent[key] = now
+                        self.state['notification_sent'] = dict(sorted(
+                            ((k, v) for k, v in sent.items() if now - v < 7 * 86400),
+                            key=lambda pair: pair[1])[-1024:])
+                        # Persist before ack: a failed ack must not resend the message.
+                        self.save()
+                await self.agent.call('ack', id=event['id'])
+                continue
             await self.text(event_text(event),name='assistant-report-'+str(event['id'])+'.txt')
             if event['kind']=='job_finished':
                 try:

@@ -97,6 +97,10 @@ def validate_config(value):
     return value
 
 
+class RepositoryBusy(Denied):
+    pass
+
+
 class Checkpoints:
     def __init__(self, policy, root, store, redactor):
         self.policy, self.store, self.redactor = policy, store, redactor
@@ -148,7 +152,7 @@ class Checkpoints:
             try:
                 fcntl.flock(file, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
-                raise Denied('Another process is using the checkpoint repository. Try after it finishes.') from None
+                raise RepositoryBusy('Another process is using the checkpoint repository. Try after it finishes.') from None
             yield
 
     async def command(self, argv, env, timeout, output_file=None, max_bytes=512*1024*1024):
@@ -294,7 +298,7 @@ class Checkpoints:
                 record['snapshot_id'] = sid
                 code, text = await self.command(['restic', 'check'], env, cfg.get('timeout_seconds', 1800))
                 if code:
-                    raise Denied('Backup repository integrity check failed. Execution remains blocked.')
+                    raise Denied('Backup repository integrity check failed. Execution remains blocked. ' + self.redactor.clean(text)[-1000:])
                 record['repository_check'] = True
                 # Prove this checkpoint's exports can be restored, not just that
                 # a snapshot ID was returned. Ordinary filesystem data is checked
@@ -341,8 +345,11 @@ class Checkpoints:
     async def inspect_repository(self, read_data=True):
         if self.lock.locked():
             return {'ok': True, 'deferred': True, 'detail': 'Another checkpoint or restore is active.'}
-        with self.process_lock():
-            return await self._inspect_locked(read_data)
+        try:
+            with self.process_lock():
+                return await self._inspect_locked(read_data)
+        except RepositoryBusy:
+            return {'ok':True,'deferred':True,'detail':'Another checkpoint process is active. Repository integrity has not been checked.'}
 
     async def _inspect_locked(self, read_data):
         async with self.lock:

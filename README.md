@@ -1,4 +1,8 @@
-# Maestro 1.0.0
+# Maestro 1.1.0
+
+The private home screen now starts with Server and Discord bots. Gate, Crew, Waffle and Verifier have separate guided dashboards in Telegram and Discord. Routine setup uses labelled fields, choices, previews and confirmations. Existing terminal, files, recovery, access, inventory and backup tools remain under Advanced tools.
+
+Read the [Persian operator guide](GUIDED_FA.md) for the button paths, required team inputs and the difference between saved settings and published Discord panels. See [the change review](AUDIT_1.1.0.md) for fixes, tests and live-server prerequisites. Run `python3 scripts/build_release.py` to create matching source packages under `releases/1.1.0`; generated archives are excluded from Git.
 
 Maestro is a personal, deterministic VPS operations assistant. It has independent Discord and Telegram interfaces, one shared execution broker, and no AI dependency. It works with services beyond the Rip Cars projects.
 

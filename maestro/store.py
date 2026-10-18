@@ -9,7 +9,9 @@ from pathlib import Path
 DEFAULTS = {"enabled": False, "hourly_seconds": 3600, "daily_hour": 18, "timezone": "Asia/Tehran",
             "auto_recovery": False, "maintenance_until": 0, "report_channel": 0, "job_timeout": 120,
             "retention_days": 7, "disk_min_percent": 5, "memory_min_percent": 5,
-            "inventory_daily": True, "telegram_reports": True, "output_limit_mib": 32, "cert_warn_days": 14, 'daily_checkpoint': True}
+            "inventory_daily": True, "telegram_reports": True, "output_limit_mib": 32, "cert_warn_days": 14, 'daily_checkpoint': True,
+            'notify_telegram': True, 'notify_discord': True, 'notify_alerts': True,
+            'notify_recovery': True, 'notify_jobs': True, 'notify_daily': True}
 
 
 class Store:
@@ -28,6 +30,7 @@ CREATE TABLE IF NOT EXISTS targets(id TEXT PRIMARY KEY,data TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS pending(id TEXT PRIMARY KEY,actor TEXT,kind TEXT,payload TEXT,digest TEXT,token_hash TEXT,expires REAL,used INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY,actor TEXT,kind TEXT,state TEXT,payload TEXT,created REAL,finished REAL,exit_code INTEGER,output TEXT DEFAULT '');
 CREATE TABLE IF NOT EXISTS snapshots(id INTEGER PRIMARY KEY,at REAL,kind TEXT,target TEXT,data TEXT);
+CREATE INDEX IF NOT EXISTS snapshots_target_kind_at ON snapshots(target,kind,at DESC);
 CREATE TABLE IF NOT EXISTS incidents(key TEXT PRIMARY KEY,target TEXT,code TEXT,first_seen REAL,last_seen REAL,count INTEGER,state TEXT,detail TEXT);
 CREATE TABLE IF NOT EXISTS repairs(id INTEGER PRIMARY KEY,at REAL,target TEXT,action TEXT,result TEXT);
 CREATE TABLE IF NOT EXISTS outbox(id INTEGER PRIMARY KEY,at REAL,kind TEXT,payload TEXT,delivered INTEGER DEFAULT 0);

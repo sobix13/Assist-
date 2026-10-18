@@ -32,6 +32,8 @@ from .access import Access
 from .discovery import reconcile
 from .packages import Packages
 from .applications import Applications
+from .connections import Connections
+from . import guides
 
 
 class Engine:
@@ -49,6 +51,7 @@ class Engine:
             self.redactor.load_env(path)
         self.probes = probes or Probes(self.runner, self.redactor, policy.data.get("github_token", ""))
         self.applications = Applications(policy, self.store, self.redactor, self.probes, self.runner)
+        self.connections = Connections(self.root, self.applications, self.redactor)
         self.files = Files(self.root / "uploads", self.store, policy.same_owner)
         self.checkpoints = Checkpoints(policy, self.root, self.store, self.redactor)
         self.packages = Packages(self.root/'packages', self.checkpoints, self.store)
@@ -106,7 +109,8 @@ class Engine:
                 "scheduler_age_seconds": round(time.monotonic() - self.scheduler_tick), "scheduler_error": self.scheduler_error,
                 "jobs_active": len(self.jobs), "open_incidents": self.store.rows("SELECT * FROM incidents WHERE state='open' ORDER BY last_seen DESC LIMIT 30"),
                 "pending_reports": self.store.one("SELECT COUNT(*) AS n FROM outbox WHERE delivered=0")["n"], "targets": self.store.targets(),
-                'checkpoint': self.checkpoints.status(), 'operations': self.store.rows('SELECT id,at,kind,state FROM operations ORDER BY at DESC LIMIT 20')}
+                'checkpoint': self.checkpoints.status(), 'host':host_check(self.store.settings()),
+                'operations': self.store.rows('SELECT id,at,kind,state FROM operations ORDER BY at DESC LIMIT 20')}
 
     async def dispatch(self, actor, action, params):
         self.actor(actor)
@@ -121,6 +125,19 @@ class Engine:
             return [{'id':v['id'],'kind':v['kind'],'target':v['target']} for v in self.applications.all()]
         if action == 'application':
             return self.applications.read(params.get('id'))
+        if action == 'connections':
+            return self.connections.status(params.get('adapter'))
+        if action == 'prepare_connection':
+            payload=self.connections.prepare(params.get('adapter'),params.get('field'),params.get('value'))
+            return self.prepare(actor,{'kind':'connection','payload':payload})
+        if action == 'raffles':
+            from .applications import connect
+            spec=self.applications.spec(params.get('adapter'))
+            if spec['kind']!='raffle-v1':raise Denied('Choose Waffle.')
+            c=connect(spec['database'])
+            try:
+                return [{'id':r['id'],'title':json.loads(r['spec'])['title'],'status':r['status']} for r in c.execute('SELECT id,spec,status FROM raffles WHERE guild=? ORDER BY id DESC LIMIT 15',(spec['guild'],))]
+            finally:c.close()
         if action == 'inspect_target':
             target=self.store.target(params.get('target'))
             if not target:raise Denied('Choose an existing target.')
@@ -168,6 +185,8 @@ class Engine:
             return result
         if action == 'checkpoint_status':
             return self.checkpoints.status()
+        if action == 'backup_check':
+            return await self.checkpoints.inspect_repository(read_data=False)
         if action == 'checkpoints':
             return [{**r, 'data': json.loads(r['data'])} for r in self.store.rows('SELECT * FROM backup_runs ORDER BY at DESC LIMIT 30')]
         if action == 'recipes':
@@ -309,7 +328,8 @@ class Engine:
         if not isinstance(change, dict) or set(change) - set(DEFAULTS):
             raise Denied("Unknown settings field.")
         value = {**current, **change}
-        for key in ("enabled", "auto_recovery", 'inventory_daily', 'telegram_reports', 'daily_checkpoint'):
+        for key in ("enabled", "auto_recovery", 'inventory_daily', 'telegram_reports', 'daily_checkpoint',
+                    'notify_telegram', 'notify_discord', 'notify_alerts', 'notify_recovery', 'notify_jobs', 'notify_daily'):
             if not isinstance(value[key], bool):
                 raise Denied("Enabled and recovery flags must be true or false.")
         for key, low, high in (("hourly_seconds", 3600, 86400), ("daily_hour", 0, 23), ("job_timeout", 10, 900),
@@ -354,6 +374,8 @@ class Engine:
             plan=self.applications.plan(payload)
             payload={k:payload[k] for k in ('adapter','action','revision','changes','validation') if k in payload}
             payload['plan']=plan
+        elif kind == 'connection':
+            self.connections.validate(payload)
         elif kind == 'restore_stage':
             if not re.fullmatch('[a-f0-9]{24}', str(payload.get('checkpoint', ''))):
                 raise Denied('Choose a completed checkpoint ID.')
@@ -406,7 +428,8 @@ class Engine:
                        (key, actor, kind, json.dumps(payload), sha, secret_hash(token), expires))
         self._audit(actor, "prepare", f"{key} kind={kind} sha256={sha}; code content omitted")
         return {"id": key, "token": token, "digest": sha, "expires": expires, "kind": kind,
-                "preview": self.redactor.clean(json.dumps(payload, indent=2))}
+                "preview": self.redactor.clean(json.dumps(payload, indent=2)),
+                'summary':self.redactor.clean(guides.review_text(kind,payload) or '')}
 
     def confirm(self, actor, value):
         if len(self.jobs) >= 2:
@@ -476,7 +499,7 @@ class Engine:
         try:
             async with self.mutation_lock:
                 self.access.job(actor, kind, payload)
-                if kind in ('application','package'):
+                if kind in ('application','package','connection'):
                     self.validate_job(actor, {'kind':kind,'payload':payload})
                 self.store.operation(key, actor, kind, 'backing_up', operation)
                 self.store.run("UPDATE jobs SET state='running' WHERE id=?", (key,))
@@ -497,6 +520,10 @@ class Engine:
                     outcome=await self.applications.apply(payload['plan'],actor)
                     operation['application']=outcome
                     state,code,output=outcome['state'],0 if outcome['state']=='completed' else 1,json.dumps(outcome,indent=2)
+                elif kind == 'connection':
+                    outcome=self.connections.apply(payload)
+                    operation['connection']=outcome
+                    state,code,output='completed',0,json.dumps(outcome,ensure_ascii=False)
                 elif kind == 'restore_stage':
                     restored = await self.checkpoints.restore_stage(payload['checkpoint'])
                     state, code, output = 'completed', 0, json.dumps(restored, indent=2)
@@ -517,6 +544,14 @@ class Engine:
                     state, code, output = result.state, result.code, result.output
                     if code and state == "completed":
                         state = "failed"
+                    if kind=='service' and code==0 and payload['action'] in ('start','restart'):
+                        target=next((t for t in self.store.targets() if t['unit']==payload['unit']),None)
+                        if target:
+                            verified=await self.probes.service({**target,'expected_running':True},daily=False)
+                            operation['verification']=verified
+                            if not verified['ok']:
+                                state,code='failed',1
+                                output+='\nسرویس فرمان را دریافت کرد، اما بررسی سلامت آن موفق نبود.\n'+json.dumps(verified['issues'],ensure_ascii=False)
                     async with self.output_lock:
                         operation['output'] = await asyncio.to_thread(self.outputs.finalize, key, self.store.settings()['output_limit_mib']*1024*1024,
                             result.total_bytes, state)
@@ -566,7 +601,7 @@ class Engine:
             return None
         if target["unit"] == "maestro-agent.service":
             return None
-        if self.store.one("SELECT 1 FROM incidents WHERE target=? AND code='database_failed' AND state='open'", (target["id"],)):
+        if self.store.one("SELECT 1 FROM incidents WHERE target=? AND code IN ('database_failed','database_review') AND state='open'", (target["id"],)):
             return {"action": "escalate", "detail": "An unresolved database integrity/configuration incident blocks restart."}
         registry = Path(self.policy.data.get("coordination_path", "/var/lib/ripcars-bots/coordination.sqlite3"))
         if registry.is_file():
@@ -647,7 +682,7 @@ class Engine:
                     # Watch/hourly checks cannot resolve an incident whose daily-only probe did not run.
                     observed = {i["code"] for i in report["issues"]}
                     if kind != "daily":
-                        observed |= {r["code"] for r in self.store.rows("SELECT code FROM incidents WHERE target=? AND state='open' AND code IN ('database_failed','backup_failed','certificate_review')", (target["id"],))}
+                        observed |= {r["code"] for r in self.store.rows("SELECT code FROM incidents WHERE target=? AND state='open' AND code IN ('database_failed','database_review','backup_failed','certificate_review')", (target["id"],))}
                     self.resolve(target["id"], observed)
                     report["runbooks"] = classify(report.get("journal", ""))
                     if report["issues"]:
@@ -675,14 +710,17 @@ class Engine:
                             report["repository"] = repo
                         except Exception as exc:
                             report["repository"] = {"ok": False, "detail": type(exc).__name__}
-                    self.store.run("INSERT INTO snapshots(at,kind,target,data) VALUES(?,?,?,?)", (time.time(), kind, target["id"], json.dumps(report)))
+                    self.record_snapshot(kind,target['id'],report)
                     result["targets"].append(report)
                 except Exception as exc:
                     detail = type(exc).__name__ + ": " + self.redactor.clean(exc)
                     self.incident(target["id"], "probe_failed", detail)
                     result["targets"].append({"id": target["id"], "ok": False, "issues": [{"code": "probe_failed", "detail": detail}]})
-            for issue in result["host"]["issues"]:
-                self.incident("host", "resource_pressure", issue)
+            if result['host']['issues']:
+                host=result['host']
+                critical=any(host.get(key,100)<1 for key in ('disk_free_percent','memory_available_percent','inode_free_percent') if host.get(key) is not None)
+                detail=('Critical resources: ' if critical else 'Resource pressure: ')+f"disk free {host['disk_free_percent']}%, memory available {host['memory_available_percent']}%. "+'; '.join(host['issues'])
+                self.incident('host','resource_pressure',detail)
             self.resolve("host", {"resource_pressure"} if result["host"]["issues"] else set())
             if kind != 'watch':
                 # Observe failures outside our enrolled applications without claiming
@@ -732,7 +770,7 @@ class Engine:
                         result['backup_repository'] = await self.checkpoints.inspect_repository(read_data=not manual)
                         self.store.put('last_backup_check', result['backup_repository'])
                     except (OSError, ValueError, sqlite3.Error, asyncio.TimeoutError) as exc:
-                        result['backup_repository'] = {'ok': False, 'detail': type(exc).__name__}
+                        result['backup_repository'] = {'ok': False, 'detail': type(exc).__name__ + ': ' + self.redactor.clean(exc)[:1000]}
                     if not result['backup_repository']['ok']:
                         self._event('checkpoint_review', result['backup_repository'])
                         self.incident('backups', 'checkpoint_failed', result['backup_repository']['detail'])
@@ -758,6 +796,19 @@ class Engine:
                 self._event("scheduled_report" if not manual else "manual_report", result)
             return result
 
+    def record_snapshot(self,kind,target,report):
+        now=time.time()
+        if kind=='watch':
+            fields=report.get('fields',{})
+            signature=digest({'issues':report.get('issues',[]),
+                              'state':{k:fields.get(k) for k in ('ActiveState','SubState','Result','MainPID','NRestarts','ExecMainStatus')},
+                              'checks':{k:v.get('ok') for k,v in report.get('checks',{}).items() if isinstance(v,dict)}})
+            previous=self.store.get('watch_snapshot:'+target,{})
+            if previous.get('signature')==signature and now-previous.get('at',0)<3600:
+                return
+            self.store.put('watch_snapshot:'+target,{'signature':signature,'at':now})
+        self.store.run('INSERT INTO snapshots(at,kind,target,data) VALUES(?,?,?,?)',(now,kind,target,json.dumps(report)))
+
     async def scheduler_step(self, now=None):
         now = time.time() if now is None else now
         settings = self.store.settings()
@@ -773,6 +824,8 @@ class Engine:
             finally:
                 self.store.put('last_discovery', now)
         if not settings["enabled"]:
+            return
+        if self.monitor_lock.locked():
             return
         if now - self.store.get("last_watch", 0) >= 60:
             await self.check_cycle("watch")

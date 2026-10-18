@@ -19,14 +19,15 @@ def main():
         target=input('Existing Maestro target ID [verifier]: ').strip() or 'verifier'
         if not store.target(target):raise ValueError('Add this service to Maestro first.')
         key=input('Adapter ID [verifier]: ').strip() or 'verifier'
-        kind=input('Adapter kind [verifier-v1 or jsonfile]: ').strip() or 'verifier-v1'
-        if kind=='verifier-v1':
+        kind=input('Adapter kind [verifier-v1, gate-v1, crew-v1, raffle-v1 or jsonfile]: ').strip() or 'verifier-v1'
+        if kind in ('verifier-v1','gate-v1','crew-v1','raffle-v1'):
+            bot=kind.split('-')[0]
             value={'id':key,'target':target,'kind':kind,
-                   'install':input('Installed source directory [/opt/ripcars-verifier/current]: ').strip() or '/opt/ripcars-verifier/current',
-                   'database':input('SQLite database [/var/lib/ripcars-verifier/verifier.sqlite3]: ').strip() or '/var/lib/ripcars-verifier/verifier.sqlite3',
-                   'env_file':input('Existing Verifier environment [/etc/ripcars-verifier.env]: ').strip() or '/etc/ripcars-verifier.env',
+                   'install':input('Installed source directory [/opt/ripcars-'+bot+'/current]: ').strip() or '/opt/ripcars-'+bot+'/current',
+                   'database':input('SQLite database [/var/lib/ripcars-'+bot+'/'+bot+'.sqlite3]: ').strip() or '/var/lib/ripcars-'+bot+'/'+bot+'.sqlite3',
+                   'env_file':input('Existing private environment [/etc/ripcars-'+bot+'.env]: ').strip() or '/etc/ripcars-'+bot+'.env',
                    'coordination_path':input('Shared coordination database [/var/lib/ripcars-bots/coordination.sqlite3]: ').strip() or '/var/lib/ripcars-bots/coordination.sqlite3',
-                   'guild':int(input('Verifier Discord server ID: ').strip())}
+                   'guild':int(input('Discord server ID: ').strip())}
         elif kind=='jsonfile':
             value={'id':key,'target':target,'kind':kind,'path':input('Existing absolute JSON configuration path: ').strip(),
                    'fields':json.loads(input('Editable field schema JSON, e.g. {"enabled":{"type":"bool"}}: '))}
