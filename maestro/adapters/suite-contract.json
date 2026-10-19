@@ -1,6 +1,6 @@
 {
   "raffle": {
-    "revision": "a4ff5497da40c91b93012b49392f5536d28ccd5f",
+    "revision": "217e1d2cff5bf526abffeeba18a5c790300e6563",
     "version": "1.0.1",
     "files": {
       "main.py": "ae951bfabfb39052e7e22e84cba6ae0494a2ca3c",
@@ -13,7 +13,7 @@
       "ripcars_raffle/coordination.py": "469826ddb18557726c8f0a9374f673ad05f41867",
       "ripcars_raffle/drawing.py": "134e5e5a2f04ead0e35bfdde9e91e0c643e29f93",
       "ripcars_raffle/eligibility.py": "ae861f69f6924e8cb6d6eef828f8b1a79ced721f",
-      "ripcars_raffle/operations.py": "8f086b04a4f2213f0e54346458f8d1ee1084592d",
+      "ripcars_raffle/operations.py": "44c8e425ee971d44297a24da467a5f5aafdb18d2",
       "ripcars_raffle/public_ui.py": "f5f62edd056ff7597ba857de536e0c56a558f008",
       "ripcars_raffle/service.py": "a1530959bc2838f27a0e528b9f1997610b4a28b3",
       "ripcars_raffle/storage.py": "b0da851a1cbef9b31907a731b5a759ee614343ed"
