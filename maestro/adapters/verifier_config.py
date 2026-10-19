@@ -87,7 +87,7 @@ def safe_url(value, origin_only=False):
 
 
 DEFAULTS = {
-    'enabled': False, 'wallet_linking': True, 'account_linking': False,
+    'enabled': False, 'wallet_linking': False, 'account_linking': False,
     'balance_mode': 'off', 'asset_mode': 'off', 'deposit_mode': 'off',
     'platform_points': False, 'rip_feed': False, 'chain_webhook': False,
     'member_role': 0, 'verification_channel': 0, 'rip_channel': 0, 'log_channel': 0,
