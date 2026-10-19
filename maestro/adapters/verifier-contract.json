@@ -5,9 +5,9 @@
     "ripcars_verifier/config.py": "dfe819377854044e8967f4a61d55171f6d832f9d4e281e26c590844b61bbfb2f",
     "ripcars_verifier/storage.py": "3082b1f4d8fa20c06555556f23607bb9eecbd260409e5e8bfecd6aecd65f912f",
     "ripcars_verifier/member_ui.py": "be624cf27b37e75b374ab0520fef4b3e7b7f4a0fe8ab4119307bb95cb3911c1d",
-    "ripcars_verifier/bot.py": "53052f6e611b9bb2d168d463b832a1ffc941cc63d2121a5af397a8662f31ff49",
+    "ripcars_verifier/bot.py": "cae92360f27bbceac7d7edf524d2a31c80f00696332d5a55a059e4e63bc40b7f",
     "ripcars_verifier/coordination.py": "5e9db33006acd1a264b3f030fbde36b5073f9ec7bd21f711234698664f05d51d",
     "ripcars_verifier/engine.py": "bc0ce7f1911abd71e6c4f8d3d116f46838cfd8268bd5702f090b04681cc5705a"
   },
-  "revision": "3a043cbf520422c7bc8bcb6f6ec04ab1daa972e0"
+  "revision": "036e4d1b454138cb27309f40f8434e3dd8e7f043"
 }
