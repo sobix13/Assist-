@@ -290,12 +290,16 @@ class GuidedTests(EngineCase):
 
     async def test_connection_fields_report_required_values_only_for_enabled_sources(self):
         rows=await self.engine.dispatch(TELEGRAM,'connections',{'adapter':'verifier'})
-        self.assertEqual([r['field'] for r in rows if r['required']],['PUBLIC_URL'])
+        self.assertEqual([r['field'] for r in rows if r['required']],[])
         cfg=verifier_config.defaults();cfg.update(asset_mode='das',platform_points=True)
         c=sqlite3.connect(self.specs[3]['database']);c.execute('INSERT INTO settings VALUES(?,1,?)',(123456789,json.dumps(cfg)));c.commit();c.close()
         rows=await self.engine.dispatch(TELEGRAM,'connections',{'adapter':'verifier'})
         required={r['field'] for r in rows if r['required']}
-        self.assertEqual(required,{'PUBLIC_URL','DAS_URL','PLATFORM_API_URL','PLATFORM_API_KEY'})
+        self.assertEqual(required,{'DAS_URL','PLATFORM_API_URL','PLATFORM_API_KEY'})
+        cfg['wallet_linking']=True
+        c=sqlite3.connect(self.specs[3]['database']);c.execute('UPDATE settings SET value=? WHERE guild=?',(json.dumps(cfg),123456789));c.commit();c.close()
+        rows=await self.engine.dispatch(TELEGRAM,'connections',{'adapter':'verifier'})
+        self.assertTrue(next(r['required'] for r in rows if r['field']=='PUBLIC_URL'))
 
     async def test_api_inputs_never_leak_after_frontend_restart_or_failed_job(self):
         value='private-api-key-for-persistent-review'

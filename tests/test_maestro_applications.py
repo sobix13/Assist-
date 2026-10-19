@@ -130,7 +130,9 @@ class ApplicationTests(EngineCase):
         self.assertTrue(any(x['id']==str(MEMBER) and int(x['allow'])&HISTORY for x in public['permission_overwrites']))
         self.assertTrue(any(x['id']==str(MEMBER) and int(x['deny'])&VIEW for x in private['permission_overwrites']))
         message=self.discord.messages[str(cfg['public_message'])]
-        self.assertEqual(message['components'][0]['components'][0]['custom_id'],'rcv:wallet:v1')
+        buttons={button['custom_id'] for row in message['components'] for button in row['components']}
+        self.assertIn('rcv:status:v1',buttons)
+        self.assertNotIn('rcv:wallet:v1',buttons)
         self.assertEqual({x['owner'] for x in protocol.inspect(self.registry,GUILD)['resources']},{'bot:'+BOT})
         self.assertFalse(protocol.inspect(self.registry,GUILD)['leases'])
 
