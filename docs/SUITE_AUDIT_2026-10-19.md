@@ -36,7 +36,13 @@ The browser-published companion trees match the locally tested candidates exactl
 | --- | --- |
 | sobix13/Ripcars-Gate | f9e1afaa10fbfad3aab343ab8ea17f8cc64fdf63 |
 | sobix13/Ripcars-Crew | fbf64123dab64121ae8be118f17fd2de10e8e0bd |
-| sobix13/Ripcars-Raffle | a4ff5497da40c91b93012b49392f5536d28ccd5f |
+| sobix13/Ripcars-Raffle | 217e1d2cff5bf526abffeeba18a5c790300e6563 |
 | sobix13/Verify-bot | 03d50bd4360ce632eb2ccf3f239b215e97659177 |
 
 The main branches and VPS services were not changed during publication. A push is not an installation.
+
+## Backup timestamp follow-up
+
+Raffle formerly read the seconds and nanoseconds separately when naming a backup. Crossing a second between those reads could give the newest file an older name, so retention deleted it immediately. The filename now uses one clock reading. A deterministic regression fails on the old code and passes on the fix. Raffle validation: 221 tests passed. Maestro source hashes and the matching fixture were updated together; source validation remains enforced. The original audit counts above describe the initial audit run, before this follow-up.
+
+VPS update recovery must inspect the full traceback and already completed application steps before retrying. A prepared Verifier release without an active current symlink is a first-install task, not an existing installation to update. Never skip backup verification or tests to finish an update.
