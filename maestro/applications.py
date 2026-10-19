@@ -151,6 +151,7 @@ class Applications:
                 if not changes or set(changes)-set(cfg):raise Denied('Choose existing application fields.')
                 cfg.update(copy.deepcopy(changes))
                 suite.validate(v,cfg)
+                suite.validate_transition(v,current['settings'],cfg)
         else:
             fields=v.get('fields',{})
             if not changes or set(changes)-set(fields):raise Denied('Only locally declared JSON fields are editable.')
