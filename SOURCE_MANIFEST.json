@@ -94,7 +94,7 @@
   "scripts/local_checkpoint.py": "8ccf6ff18bbed348c053a71d17f66efb756da93f3049e94fbae6ef5ebc484c53",
   "scripts/restore_backup.py": "39c035df412b7516c1dc1e125cc9e7ad525f6632a2daa83a7941f487ce8c4c10",
   "scripts/rollback.sh": "a5675c56c3f11183c36fb3429d72532a7af38f90d487e828128bdab068a5f281",
-  "scripts/stage_release.py": "27752bed298bbd52eef4c939be617eaf6b7025d61c603f19a15dd728df562ef1",
+  "scripts/stage_release.py": "7220030b923f3186a13b9789465c91cb6c3df4d4fed604c0b164b71f6a06d7a9",
   "scripts/update.sh": "cb0b96a850308eaf09a2e7898cf74e025dbb05780065f6606bc59d58729c3118",
   "scripts/verify_release.py": "09f469e97c35bcf3f92f7a00ee63eac54555000321be8f1e8db40bff6e675984",
   "tests/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
@@ -117,6 +117,7 @@
   "tests/test_notifications_policy.py": "b3b115f7746e521dad2be9f130352add5eb23b12e059d4de74597dc1370cbbfc",
   "tests/test_runtime_fixes.py": "264dd641a1097700e05526a941a098c04b433a2aac4ea735e5f8b7d58671b125",
   "tests/test_security_files.py": "30a2f1f4731c4e55a1469a34a0f95f40a0cf764a36fa92e5d559d412796cc2f3",
+  "tests/test_stage_release.py": "a500b5432048b6f260dd6c1fb6ab877481c440a9a2c93da44e1f7a2192646dd4",
   "tests/test_telegram_witness.py": "141e108cbcd0bece0e067e2609b0f2df2783cf30ad1f05a5f6a175bb956824e5",
   "tests/test_ui_deployment.py": "d2e83a318ec424d61be6357371789363aa90d7f309e7d608aff671c06e58a1fc",
   "tests/test_v2_lifecycle.py": "ca3765eb8efaee229e71e006089473eb7e04b3e7d8a1ad4f3cb17092a7bda9a7"

@@ -14,6 +14,8 @@ def stage(source, destination):
     if not re.fullmatch(r"\d+\.\d+\.\d+", version) or destination.exists() or source == destination or source in destination.parents:
         raise ValueError("Use a new staging directory outside a valid source release.")
     shutil.copytree(source, destination, ignore=shutil.ignore_patterns(".git", ".venv", ".env", "__pycache__", "*.pyc", "*.sqlite3*", "policy.json", "frontend.env", "telegram.env", "external.env", "backup.json", "restic.env", "recipes.json", "applications.json", "releases", "dist", "uploads", "jobs", "data", "outputs", "checkpoints", "rollback-*", "restic-cache", 'packages','delegates'))
+    # copytree preserves mktemp's 0700 mode, which blocks the interface users.
+    destination.chmod(0o755)
     venv.create(destination / ".venv", with_pip=True, symlinks=True)
     python = destination / ".venv/bin/python"
     subprocess.run([str(python), "-m", "pip", "install", "--disable-pip-version-check", "-r", str(destination / "requirements-lock.txt")], check=True)
