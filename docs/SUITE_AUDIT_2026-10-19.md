@@ -35,7 +35,7 @@ The browser-published companion trees match the locally tested candidates exactl
 | Repository | Published audit commit |
 | --- | --- |
 | sobix13/Ripcars-Gate | f9e1afaa10fbfad3aab343ab8ea17f8cc64fdf63 |
-| sobix13/Ripcars-Crew | fbf64123dab64121ae8be118f17fd2de10e8e0bd |
+| sobix13/Ripcars-Crew | cbc5b62e9d2db37467ecb1f11961981e86ba99d3 |
 | sobix13/Ripcars-Raffle | 217e1d2cff5bf526abffeeba18a5c790300e6563 |
 | sobix13/Verify-bot | 03d50bd4360ce632eb2ccf3f239b215e97659177 |
 
@@ -46,3 +46,11 @@ The main branches and VPS services were not changed during publication. A push i
 Raffle formerly read the seconds and nanoseconds separately when naming a backup. Crossing a second between those reads could give the newest file an older name, so retention deleted it immediately. The filename now uses one clock reading. A deterministic regression fails on the old code and passes on the fix. Raffle validation: 221 tests passed. Maestro source hashes and the matching fixture were updated together; source validation remains enforced. The original audit counts above describe the initial audit run, before this follow-up.
 
 VPS update recovery must inspect the full traceback and already completed application steps before retrying. A prepared Verifier release without an active current symlink is a first-install task, not an existing installation to update. Never skip backup verification or tests to finish an update.
+
+## Crew command response follow-up
+
+Live logs showed Discord error 10062 both during initial acknowledgement and again during error reporting. Two unauthenticated VPS HTTP probes completed in 65-81 ms; they do not measure Gateway delivery or callback latency. No root cause is inferred from those probes alone.
+
+A real SQLite writer lock reproduced missing initial acknowledgements for panel/doctor and moderator authorization before health. Crew now acknowledges application commands before authorization database work, while preserving all permission checks. The test-rule modal and autocomplete keep their own response types. Failed acknowledgements prevent dispatch, and error 10062 is logged with command age and Gateway latency without retrying actions or sending a second invalid reply. Other errors remain reportable.
+
+Seven new regression tests use real discord.py command dispatch and interaction responses, including a real SQLite writer lock. Crew: 190 tests passed. Maestro: 263 tests passed with real Restic checkpoint and package restore tests enabled. Source hashes and fixtures were updated together. A live test of Crew panel, doctor and health is still required; these offline checks cannot prove Gateway timing on the VPS.
