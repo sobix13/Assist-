@@ -72,6 +72,39 @@ class GuidedTests(EngineCase):
         if task:await task
         return self.engine.job(TELEGRAM,jobs[0]['id'])
 
+    async def test_gate_activation_cannot_bypass_native_setup_checks(self):
+        current=self.engine.applications.read('gate')
+        with self.assertRaisesRegex(Denied,'/gate panel'):
+            self.engine.applications.plan({'adapter':'gate','revision':current['revision'],'changes':{'enabled':True}})
+        self.assertFalse(self.engine.applications.read('gate')['settings']['enabled'])
+
+    async def test_native_activation_guard_also_protects_direct_commit(self):
+        from maestro.applications import connect
+        spec=self.engine.applications.spec('gate');current=self.engine.applications.read('gate')
+        cfg=copy.deepcopy(current['settings']);cfg['enabled']=True
+        c=connect(spec['database'],False)
+        try:
+            with self.assertRaisesRegex(Denied,'/gate panel'):
+                suite.commit(spec,c,cfg,current['revision'],TELEGRAM)
+        finally:c.close()
+        self.assertFalse(self.engine.applications.read('gate')['settings']['enabled'])
+
+    async def test_guided_gate_activation_explains_native_health_check(self):
+        await self.front.handle(callback('g:enable:gate'))
+        self.assertIn('/gate panel',self.message()['text'])
+        self.assertEqual(await self.engine.dispatch(TELEGRAM,'jobs',{}),[])
+
+    async def test_crew_active_config_needs_native_check_but_pause_remains_available(self):
+        c=sqlite3.connect(self.specs[1]['database'])
+        cfg=suite.crew_config.defaults();cfg['guard']['enabled']=True;cfg['guard']['mode']='observe'
+        c.execute('INSERT INTO crew_settings VALUES(?,?,?,?)',(123456789,1,json.dumps(cfg),0));c.commit();c.close()
+        cfg['guard']['mode']='protect'
+        with self.assertRaisesRegex(Denied,'/crew panel'):
+            self.engine.applications.plan({'adapter':'crew','revision':1,'changes':{'guard':cfg['guard']}})
+        cfg['guard']['mode']='observe';cfg['guard']['enabled']=False
+        plan=self.engine.applications.plan({'adapter':'crew','revision':1,'changes':{'guard':cfg['guard']}})
+        self.assertFalse(plan['settings']['guard']['enabled'])
+
     async def test_home_is_small_and_all_old_sections_remain_accessible(self):
         await self.front.handle(update('/start'))
         self.assertEqual(set(self.actions()),{'g:server','g:bots','g:help','jobs'})
