@@ -20,15 +20,15 @@
     }
   },
   "crew": {
-    "revision": "fbf64123dab64121ae8be118f17fd2de10e8e0bd",
+    "revision": "cbc5b62e9d2db37467ecb1f11961981e86ba99d3",
     "version": "1.0.1",
     "files": {
       "main.py": "ebe18de2b5297bff7f2512ec1e5cf5a4d43630df",
       "ripcars_coordination.py": "4d0ccc6572b909c3a676e329838c0c2ee52fd6d5",
       "ripcars_crew/__init__.py": "4a4abf8fb1a106f46bedc793a09a5969749f691d",
       "ripcars_crew/admin_ui.py": "c59d02ef82e52ed5ba0b20183a960cd550eae694",
-      "ripcars_crew/bot.py": "3fa1097435abc0d56e18d4b04412ea4430f07396",
-      "ripcars_crew/commands.py": "6f2e3ecfa689632ba60949a1de55291cab3a4fbb",
+      "ripcars_crew/bot.py": "09a64c9837ca657afc4740c7782eae5cb9dc3ebd",
+      "ripcars_crew/commands.py": "e300fd3cdc712b87268a46f4ef8b7a6c04d357d4",
       "ripcars_crew/config.py": "a0d91ee1060a179ed0e306cfacf668d2c669db25",
       "ripcars_crew/coordination.py": "8509c2a72b9b501ac4c308fea9bd081107107123",
       "ripcars_crew/detection.py": "8e605eccd8cda14ae0152ada9b130410c5fb7b0b",
@@ -38,7 +38,7 @@
       "ripcars_crew/storage.py": "f4a865722a9d1456ef48ed0cae6581d9d0889f30",
       "ripcars_crew/ticket_ui.py": "1b8e9e1037a18cd504eecc98c2b60be4b01c00f6",
       "ripcars_crew/tickets.py": "4100e1b35d55f02c98afac77c2659243134bf196",
-      "ripcars_crew/ui_common.py": "1eb12390766b3e43f682105c45ac62987a961c6e"
+      "ripcars_crew/ui_common.py": "41d1836dbc74fe5b87083f7ec4f18ada1c9c782c"
     }
   },
   "gate": {
