@@ -58,7 +58,7 @@ class GuidedTests(EngineCase):
             Path(spec['env_file']).write_text('DISCORD_TOKEN=fixture-token-for-own-bot\nGUILD_ID=123456789\n');Path(spec['env_file']).chmod(0o600)
             self.specs.append(spec)
         root=source/'verifier';root.mkdir()
-        with zipfile.ZipFile(Path(__file__).parent/'fixtures/verifier-1.1.0-contract.zip') as z:z.extractall(root)
+        with zipfile.ZipFile(Path(__file__).parent/'fixtures/verifier-1.2.0-contract.zip') as z:z.extractall(root)
         spec={'id':'verifier','target':'verifier','kind':'verifier-v1','guild':123456789,'install':str(root),
               'database':str(self.folder/'verifier.sqlite3'),'env_file':str(self.folder/'verifier.env'),'coordination_path':str(self.folder/'coordination.sqlite3')}
         c=sqlite3.connect(spec['database']);c.executescript("CREATE TABLE meta(key TEXT,value TEXT);INSERT INTO meta VALUES('schema_version','1');CREATE TABLE settings(guild INTEGER PRIMARY KEY,revision INTEGER,value TEXT);CREATE TABLE ledger(guild INTEGER,event_id TEXT);CREATE TABLE jobs(guild INTEGER,next_run REAL);CREATE TABLE audit(id INTEGER PRIMARY KEY,guild INTEGER,actor INTEGER,action TEXT,detail TEXT,created REAL);");c.close()

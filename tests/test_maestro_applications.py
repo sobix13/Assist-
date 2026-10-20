@@ -65,7 +65,7 @@ class ApplicationTests(EngineCase):
         await super().asyncSetUp()
         self.use_fake_probes();self.engine.applications.probes=self.engine.probes
         self.source=self.folder/'verifier';self.source.mkdir()
-        with zipfile.ZipFile(Path(__file__).parent/'fixtures/verifier-1.1.0-contract.zip') as z:z.extractall(self.source)
+        with zipfile.ZipFile(Path(__file__).parent/'fixtures/verifier-1.2.0-contract.zip') as z:z.extractall(self.source)
         self.db=self.folder/'verifier.sqlite3'
         c=sqlite3.connect(self.db)
         c.executescript("CREATE TABLE meta(key TEXT PRIMARY KEY,value TEXT); INSERT INTO meta VALUES('schema_version','1'); CREATE TABLE settings(guild INTEGER PRIMARY KEY,revision INTEGER,value TEXT); CREATE TABLE ledger(guild INTEGER,event_id TEXT); CREATE TABLE jobs(guild INTEGER,next_run REAL); CREATE TABLE audit(id INTEGER PRIMARY KEY,guild INTEGER,actor INTEGER,action TEXT,detail TEXT,created REAL);")
@@ -133,6 +133,16 @@ class ApplicationTests(EngineCase):
         buttons={button['custom_id'] for row in message['components'] for button in row['components']}
         self.assertIn('rcv:status:v1',buttons)
         self.assertNotIn('rcv:wallet:v1',buttons)
+
+    async def test_self_transfer_button_survives_broker_publication_with_all_methods(self):
+        job=await self.run_request(await self.request('provision',{'wallet_transfer':True,'wallet_linking':True,'account_linking':True,'mint':'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v','balance_mode':'rpc'}))
+        self.assertEqual(job['state'],'completed',job['output'])
+        cfg=self.engine.applications.read('verifier')['settings']
+        message=self.discord.messages[str(cfg['public_message'])]
+        buttons={b['custom_id'] for row in message['components'] for b in row['components']}
+        self.assertIn('rcv:transfer:v1',buttons)
+        self.assertEqual(len(buttons),6)
+        self.assertTrue(all(len(row['components'])<=5 for row in message['components']))
         self.assertEqual({x['owner'] for x in protocol.inspect(self.registry,GUILD)['resources']},{'bot:'+BOT})
         self.assertFalse(protocol.inspect(self.registry,GUILD)['leases'])
 
