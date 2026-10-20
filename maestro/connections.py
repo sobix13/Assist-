@@ -10,6 +10,7 @@ from .checkpoints import file_hash
 from .security import Denied, digest, read_env
 
 FIELDS = {'PUBLIC_URL':('دامنه اتصال کیف پول (اختیاری)',False), 'RPC_URL':('API سولانا',True),
+          'RPC_FALLBACK_URL':('API پشتیبان سولانا (اختیاری)',True),
           'DAS_URL':('API مجموعه‌های سولانا',True), 'PLATFORM_API_URL':('API سایت ریپ‌کارز',False),
           'PLATFORM_API_KEY':('کلید API سایت',True), 'PLATFORM_WEBHOOK_SECRET':('کلید وبهوک سایت',True),
           'CHAIN_WEBHOOK_SECRET':('کلید وبهوک زنجیره',True)}
@@ -41,7 +42,7 @@ class Connections:
         _,path=self.spec(adapter);env=read_env(path)
         cfg=self.applications.read(adapter)['settings']
         platform=cfg['account_linking'] or cfg['platform_points'] or 'platform' in (cfg['balance_mode'],cfg['asset_mode'],cfg['deposit_mode'])
-        required={'PUBLIC_URL':cfg['wallet_linking'],'RPC_URL':cfg['chain_webhook'] or 'rpc' in (cfg['balance_mode'],cfg['deposit_mode']),
+        required={'PUBLIC_URL':cfg['wallet_linking'],'RPC_URL':cfg['chain_webhook'] or 'rpc' in (cfg['balance_mode'],cfg['deposit_mode']),'RPC_FALLBACK_URL':False,
                   'DAS_URL':cfg['asset_mode']=='das','PLATFORM_API_URL':platform,'PLATFORM_API_KEY':platform,
                   'PLATFORM_WEBHOOK_SECRET':cfg['account_linking'] or cfg['rip_feed'],'CHAIN_WEBHOOK_SECRET':cfg['chain_webhook']}
         return [{'field':k,'label':name,'configured':bool(env.get(k)),'secret':secret,'required':bool(required[k])} for k,(name,secret) in FIELDS.items()]

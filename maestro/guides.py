@@ -9,7 +9,7 @@ NOTICES = {'notify_telegram': 'ارسال در تلگرام', 'notify_discord': 
            'notify_jobs': 'نتیجه کارهای درخواستی', 'notify_daily': 'خلاصه روزانه'}
 GROUPS = {
     'verifier': [('identity', 'کانال‌ها و نقش اعضا', ['member_role','verification_channel','log_channel','rip_channel']),
-                 ('sources', 'اتصال داده‌ها', ['wallet_linking','account_linking','balance_mode','asset_mode','deposit_mode','platform_points','rip_feed','chain_webhook','mint','collections','platform_connect_url']),
+                 ('sources', 'اتصال داده‌ها', ['wallet_transfer','wallet_linking','account_linking','balance_mode','asset_mode','deposit_mode','platform_points','rip_feed','chain_webhook','mint','collections','platform_connect_url']),
                  ('rules', 'شرط نقش و منابع واریز', ['rules','sources']), ('texts', 'متن‌های عمومی', ['texts']),
                  ('timing', 'زمان بررسی', ['sync_seconds','max_wallets','snapshot_max_age'])],
     'raffle': [('identity', 'کانال‌ها و مدیران', ['member_role','channel','log_channel','manager_roles']),
@@ -26,7 +26,7 @@ LABELS = {
  'member_role':'نقش اعضای تأییدشده', 'channel':'کانال قرعه‌کشی', 'log_channel':'کانال گزارش خصوصی',
  'verification_channel':'کانال اتصال کیف پول', 'rip_channel':'کانال نمایش باز شدن پک‌ها',
  'manager_roles':'نقش‌های مدیر قرعه‌کشی', 'moderator_roles':'نقش‌های تیم پشتیبانی',
- 'wallet_linking':'اتصال کیف پول', 'account_linking':'اتصال حساب سایت', 'balance_mode':'منبع موجودی توکن',
+ 'wallet_transfer':'تأیید با انتقال به خود', 'wallet_linking':'اتصال کیف پول', 'account_linking':'اتصال حساب سایت', 'balance_mode':'منبع موجودی توکن',
  'asset_mode':'منبع مجموعه دارایی‌ها', 'deposit_mode':'منبع واریزها', 'platform_points':'امتیازهای سایت',
  'rip_feed':'نمایش باز شدن پک‌ها', 'chain_webhook':'دریافت رویداد زنجیره', 'mint':'آدرس توکن CARS',
  'collections':'آدرس مجموعه‌های رسمی', 'platform_connect_url':'صفحه اتصال حساب سایت',

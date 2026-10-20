@@ -187,10 +187,10 @@ class VerifierBridge:
                 if not self.cfg['verification_channel']:raise Denied('Select the verification text channel first.')
                 self.lease(c,token)
                 components=[]
-                for key,label,show in [('wallet','Connect wallet',self.cfg['wallet_linking']),('account','Connect account',self.cfg['account_linking']),('status','My status',True),('refresh','Refresh',True),('disconnect','Disconnect',True)]:
+                for key,label,show in [('transfer','Verify wallet without connecting',self.cfg['wallet_transfer']),('wallet','Connect wallet',self.cfg['wallet_linking']),('account','Connect account',self.cfg['account_linking']),('status','My status',True),('refresh','Refresh',True),('disconnect','Disconnect',True)]:
                     if show:components.append({'type':2,'style':1 if key=='wallet' else 2,'label':label,'custom_id':'rcv:'+key+':v1'})
                 payload={'embeds':[{'title':self.cfg['texts']['title'],'description':self.cfg['texts']['description'],'color':self.cfg['color']}],
-                         'components':[{'type':1,'components':components}],'allowed_mentions':{'parse':[]}}
+                         'components':[{'type':1,'components':components[n:n+5]} for n in range(0,len(components),5)],'allowed_mentions':{'parse':[]}}
                 base='/channels/'+str(self.cfg['verification_channel'])+'/messages'
                 if self.cfg['public_message']:
                     old=await self.api.call('GET',base+'/'+str(self.cfg['public_message']))

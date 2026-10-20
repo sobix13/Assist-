@@ -312,7 +312,7 @@ class TelegramMaestro(GuidedFlow):
             await self.text('Maestro | '+value+'\nRevision: '+str(current['revision'])+'\nSelect a setting group.\n'+json.dumps(current['settings'],indent=2),rows+[[self.button('Home','home')]])
         elif key == 'app_features':
             current=await self.agent.call('application',id=value)
-            fields=['wallet_linking','account_linking','platform_points','rip_feed','chain_webhook']
+            fields=['wallet_transfer','wallet_linking','account_linking','platform_points','rip_feed','chain_webhook']
             rows=[[self.button(field.replace('_',' ').title()+': '+('On' if current['settings'][field] else 'Off'),'app_toggle:'+value+':'+field)] for field in fields]
             for field,choices in [('balance_mode',['off','rpc','platform']),('asset_mode',['off','das','platform']),('deposit_mode',['off','rpc','platform'])]:
                 rows.append([self.button(field.split('_')[0].title()+' '+choice,'app_mode:'+value+':'+field+':'+choice) for choice in choices])
