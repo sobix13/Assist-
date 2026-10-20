@@ -61,6 +61,19 @@ def read(spec, connection):
     return cfg,row['revision'] if row else 0
 
 
+def validate_transition(spec, before, after):
+    # Only the native bot can check current Discord access and its public panels.
+    if spec['kind']=='gate-v1' and after['enabled'] and not before['enabled']:
+        raise Denied('برای فعال‌سازی ورود، در دیسکورد /gate panel را باز کن و Health و Activate را بزن. تنظیمات مسترو حفظ شده‌اند.')
+    if spec['kind']=='crew-v1' and any(after[k]['enabled'] for k in ('guard','tickets')) and before!=after:
+        previous=copy.deepcopy(before);candidate=copy.deepcopy(after)
+        enabling=any(after[k]['enabled'] and not before[k]['enabled'] for k in ('guard','tickets'))
+        for key in ('guard','tickets'):
+            previous[key]['enabled']=False;candidate[key]['enabled']=False
+        if enabling or previous!=candidate:
+            raise Denied('برای تنظیم ماژول فعال، در دیسکورد /crew panel را باز کن تا دسترسی‌ها و پنل تیکت بررسی شوند. می‌توانی ابتدا ماژول‌ها را متوقف و تنظیمات را در مسترو ویرایش کنی.')
+
+
 def commit(spec, connection, cfg, revision, actor):
     validate(spec,cfg)
     table,column=TABLE[spec['kind']]
@@ -69,6 +82,8 @@ def commit(spec, connection, cfg, revision, actor):
         row=connection.execute(f'SELECT revision,{column} FROM {table} WHERE guild=?',(spec['guild'],)).fetchone()
         if (row['revision'] if row else 0)!=revision:
             raise Denied('تنظیمات هم‌زمان تغییر کرده است. صفحه بات را دوباره باز کن.')
+        before=json.loads(row[column]) if row else (CONFIG[spec['kind']].fresh() if spec['kind']=='raffle-v1' else CONFIG[spec['kind']].defaults())
+        validate_transition(spec,before,cfg)
         if row:
             if spec['kind']=='raffle-v1':
                 connection.execute('INSERT INTO history(guild,data,actor,at) VALUES(?,?,0,?)',(spec['guild'],row[column],time.time()))
@@ -93,6 +108,13 @@ def raffle_plan(spec, payload, cfg, connection):
         category=value.pop('category','general')
         if category not in raffle_config.CATEGORIES:
             raise Denied('نوع قرعه‌کشی را انتخاب کن.')
+        if cfg.get('raffle_role'):
+            rule=value['rules']
+            roles=rule['any_roles'] or [cfg['member_role']]
+            selected=set(roles+rule['all_roles'])
+            if cfg['raffle_role'] in selected:
+                raise Denied('نقش موقت رافل شرط ورود نیست؛ نقش واجد شرایط را انتخاب کن.')
+            rule.update(any_roles=roles,weights={str(r):rule['weights'].get(str(r),cfg['role_tickets'].get(str(r),1)) for r in selected},weight_mode='tickets',weight_cap=2000)
         raffle_config.validate_spec(value)
         if category!='general' and not (value['rules']['any_roles'] or value['rules']['all_roles']):
             raise Denied('این قرعه‌کشی به نقش واجد شرایط نیاز دارد.')
@@ -119,7 +141,7 @@ async def publish(applications, spec, data):
         identity={'user':stat.st_uid,'group':stat.st_gid,'extra_groups':os.getgrouplist(account.pw_name,stat.st_gid)}
     process=await asyncio.create_subprocess_exec(
         sys.executable,'-m','maestro.suite_worker',spec['install'],str(spec['guild']),
-        spec['database'],spec['coordination_path'],str(data['raffle_id']),
+        spec['database'],spec['coordination_path'],str(data['raffle_id']),str(data['draft_revision']),
         stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,
         env={'PATH':os.defpath,'PYTHONPATH':str(Path(__file__).resolve().parent.parent),'PYTHONDONTWRITEBYTECODE':'1'},**identity)
     try:

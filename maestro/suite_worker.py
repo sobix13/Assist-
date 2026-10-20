@@ -5,7 +5,7 @@ import sys
 
 
 async def run():
-    install,guild_id,database,coordination,rid=sys.argv[1:]
+    install,guild_id,database,coordination,rid,revision=sys.argv[1:]
     token=sys.stdin.read().strip()
     if not token:
         raise ValueError('توکن Waffle ثبت نشده است.')
@@ -34,7 +34,7 @@ async def run():
                 guild=self.get_guild(int(guild_id))
                 if not guild:
                     raise ValueError('Waffle در سرور انتخاب‌شده حضور ندارد.')
-                self.result=await self.raffles.publish(guild,int(rid),0)
+                self.result=await self.raffles.publish(guild,int(rid),0,draft_revision=int(revision))
             except Exception as exc:
                 self.failure=exc
             finally:

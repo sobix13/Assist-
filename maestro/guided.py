@@ -180,6 +180,10 @@ class GuidedFlow:
             value=guides.get_value(cfg,path)
             if page in ('toggle','enable'):
                 if type(value) is not bool:raise Denied('Choose an on/off field.')
+                if not value and (key=='gate' and path=='enabled' or key=='crew' and path in ('guard.enabled','tickets.enabled')):
+                    command='/gate panel' if key=='gate' else '/crew panel'
+                    await self.text('برای روشن کردن این بخش، در دیسکورد '+command+' را باز کن. آنجا دسترسی‌ها و آماده بودن پنل عمومی بررسی می‌شوند؛ سپس فعال‌سازی را تأیید کن.',back)
+                    return
                 await self.review('application',{'adapter':spec['id'],'action':'settings','revision':current['revision'],'changes':guides.change_value(cfg,path,not value)})
             elif page=='choice':
                 if args[2] not in guides.CHOICES.get(path,[]):raise Denied('Choose a supported option.')

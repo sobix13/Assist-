@@ -151,6 +151,7 @@ class Applications:
                 if not changes or set(changes)-set(cfg):raise Denied('Choose existing application fields.')
                 cfg.update(copy.deepcopy(changes))
                 suite.validate(v,cfg)
+                suite.validate_transition(v,current['settings'],cfg)
         else:
             fields=v.get('fields',{})
             if not changes or set(changes)-set(fields):raise Denied('Only locally declared JSON fields are editable.')
@@ -216,8 +217,8 @@ class Applications:
                     # One SQL transaction. Confirmed requests are single-use in the broker.
                     c.execute('BEGIN IMMEDIATE')
                     raffle=plan['raffle']
-                    rid=c.execute('INSERT INTO raffles(guild,actor,category,spec,created) VALUES(?,0,?,?,?)',
-                                  (spec['guild'],raffle['category'],json.dumps(raffle['spec']),time.time())).lastrowid
+                    rid=c.execute('INSERT INTO raffles(guild,actor,category,spec,created,result_mode) VALUES(?,0,?,?,?,?)',
+                                  (spec['guild'],raffle['category'],json.dumps(raffle['spec']),time.time(),'review' if plan['settings'].get('raffle_role') else 'auto')).lastrowid
                     c.execute("INSERT INTO audit(guild,actor,action,detail,at) VALUES(?,0,'maestro_draft',?,?)",(spec['guild'],actor,time.time()))
                     c.commit()
                     return {'state':'completed','raffle_id':rid,'status':'draft','verified':True,'next':'Review and publish the draft from the Waffle dashboard.'}
