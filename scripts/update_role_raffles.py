@@ -20,7 +20,7 @@ from maestro.security import read_env
 from scripts.stage_release import stage
 
 UNITS=('ripcars-raffle.service','ripcars-verifier.service','maestro-agent.service','maestro-discord.service','maestro-telegram.service')
-VERSIONS={'raffle':'1.1.0','verifier':'1.1.0','maestro':'1.1.2'}
+VERSIONS={'raffle':'1.1.0','verifier':'1.2.0','maestro':'1.1.3'}
 
 
 def command(*args,check=True,capture=False):
@@ -157,7 +157,7 @@ def main():
         except BaseException:
             command('systemctl','start',*UNITS,check=False)
             raise
-        print('ROLE_RAFFLE_UPDATE_COMPLETED. Raffle 1.1.0; Verifier 1.1.0; Maestro 1.1.2.',flush=True)
+        print('ROLE_RAFFLE_UPDATE_COMPLETED. Raffle 1.1.0; Verifier 1.2.0; Maestro 1.1.3.',flush=True)
         print('Open /raffle panel > Settings > Quick setup. Existing qualification roles and bot settings are retained.',flush=True)
         print('Gate and Crew services were not changed. Backup: '+str(backup),flush=True)
 
