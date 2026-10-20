@@ -1,7 +1,7 @@
 """Pinned static readiness rules from the owned Verifier 1.0.1 source."""
 def readiness(cfg,env):
     blockers=[]
-    if not env.get('PUBLIC_URL'): blockers.append('Set PUBLIC_URL to the verifier HTTPS origin on the VPS.')
+    if cfg['wallet_linking'] and not env.get('PUBLIC_URL'): blockers.append('Set PUBLIC_URL to the verifier HTTPS origin on the VPS.')
     if not cfg['member_role']: blockers.append('Choose the Gate member role.')
     if not cfg['verification_channel']: blockers.append('Choose the connection panel channel.')
     if not cfg['public_message']: blockers.append('Publish the connection panel before activation.')

@@ -87,12 +87,12 @@ def safe_url(value, origin_only=False):
 
 
 DEFAULTS = {
-    'enabled': False, 'wallet_linking': True, 'account_linking': False,
+    'enabled': False, 'wallet_linking': False, 'account_linking': False,
     'balance_mode': 'off', 'asset_mode': 'off', 'deposit_mode': 'off',
     'platform_points': False, 'rip_feed': False, 'chain_webhook': False,
     'member_role': 0, 'verification_channel': 0, 'rip_channel': 0, 'log_channel': 0,
     'public_message': 0, 'color': 0x800020, 'brand': 'Rip Cars',
-    'platform_connect_url': '', 'sync_seconds': 86400, 'retry_seconds': 300,
+    'platform_connect_url': '', 'sync_seconds': 43200, 'retry_seconds': 300,
     'snapshot_max_age': 3600, 'history_start': 0, 'scan_pages': 3, 'scan_limit': 100,
     'scan_transactions': 100, 'max_wallets': 3, 'error_alert_seconds': 300,
     'source_revision': 1, 'mint': '', 'sources': [], 'collections': [], 'rules': [],
@@ -106,6 +106,14 @@ DEFAULTS = {
 
 def defaults():
     return copy.deepcopy(DEFAULTS)
+
+
+def wallet_kinds(cfg):
+    return {kind for kind,mode in (('token_balance',cfg['balance_mode']=='rpc'),('asset_count',cfg['asset_mode']=='das'),('deposit_points',cfg['deposit_mode']=='rpc')) if mode}
+
+
+def account_kinds(cfg):
+    return {kind for kind,mode in (('platform_points',cfg['platform_points']),('token_balance',cfg['balance_mode']=='platform'),('asset_count',cfg['asset_mode']=='platform'),('deposit_points',cfg['deposit_mode']=='platform')) if mode}
 
 
 def validate(cfg):

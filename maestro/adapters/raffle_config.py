@@ -33,7 +33,8 @@ def rules():
 DEFAULTS = {"enabled": False, "brand": "Rip Cars", "bot_name": "Rip Cars Raffle",
             "website": "https://app.ripcars.io", "color": 0x800020,
             "member_role": 0, "manager_roles": [], "channel": 0, "log_channel": 0,
-            "blocked_users": [], "max_active": 20, "max_entries": 10000,
+            "blocked_users": [], "max_active": 1, "max_entries": 10000,
+            "raffle_role": 0, "role_tickets": {},
             "panel_update_seconds": 30, "poll_seconds": 15, "backup_hours": 24,
             "backup_keep": 14, "error_alert_seconds": 60,
             "campaign_targets": {"platform": 70, "contributors": 20, "general": 10},
@@ -91,9 +92,9 @@ def validate_rules(r):
         if not isinstance(key, str) or not key.isdecimal() or str(int(key)) != key or not ident(int(key)):
             raise ValueError("Weight keys must be canonical numeric role IDs.")
         number(value, 1, 100, "role weight")
-    if r["weight_mode"] not in ("max", "sum"):
-        raise ValueError("weight_mode: max or sum.")
-    number(r["weight_cap"], 1, 100, "weight_cap")
+    if r["weight_mode"] not in ("max", "sum", "tickets"):
+        raise ValueError("Choose highest weight, legacy bonuses, or added tickets.")
+    number(r["weight_cap"], 1, 2000 if r['weight_mode']=='tickets' else 100, "weight_cap")
     number(r["minimum_entries"], 1, 10000, "minimum_entries")
     for k in ("account_days", "server_days"):
         number(r[k], 0, 3650, k)
@@ -116,6 +117,8 @@ def validate_spec(spec):
 
 
 def validate(cfg):
+    if isinstance(cfg,dict) and set(cfg)==set(DEFAULTS)-{"raffle_role","role_tickets"}:
+        cfg.update(raffle_role=0,role_tickets={})
     if not isinstance(cfg, dict) or set(cfg) != set(DEFAULTS):
         raise ValueError("Settings have missing or unknown fields.")
     if type(cfg["enabled"]) is not bool:
@@ -123,11 +126,14 @@ def validate(cfg):
     text(cfg["brand"], 80, "brand"); text(cfg["bot_name"], 80, "bot_name")
     if not url(cfg["website"]):
         raise ValueError("website must be a valid HTTPS URL without credentials.")
-    for k in ("member_role", "channel", "log_channel"):
+    for k in ("member_role", "channel", "log_channel", "raffle_role"):
         if not ident(cfg[k], True):
             raise ValueError(f"{k} must be a numeric Discord ID or 0.")
     if not ids(cfg["manager_roles"], 10) or not ids(cfg["blocked_users"], 1000):
         raise ValueError("Manager roles or blocked user IDs are invalid.")
+    validate_rules({**rules(), "weights": cfg["role_tickets"]})
+    if cfg["raffle_role"] and cfg["raffle_role"] in {cfg["member_role"], *cfg["manager_roles"], *(int(x) for x in cfg["role_tickets"])}:
+        raise ValueError("The Raffle entry role must be separate from member, manager and weighted roles.")
     for k, lo, hi in (("color", 0, 0xFFFFFF), ("max_active", 1, 100), ("max_entries", 1, 100000),
                       ("panel_update_seconds", 10, 3600), ("poll_seconds", 5, 300),
                       ("backup_hours", 1, 168), ("backup_keep", 1, 90), ("error_alert_seconds", 30, 3600)):
