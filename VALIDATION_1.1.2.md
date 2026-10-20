@@ -3,7 +3,7 @@
 Validated 2026-10-20 with Python 3.12.14.
 
 - The complete Maestro test suite ran 266 tests. Two Restic acceptance tests initially skipped because the binary was outside PATH. Both were then run explicitly with Restic 0.16.4 and passed. No test failure remains.
-- A further launcher validation test passed, covering missing commit IDs and branch-name rejection before downloading. Total distinct Maestro tests verified: 267.
+- Further tests passed for launcher commit validation and runtime directory access when the updater uses a private file-creation mask. Total distinct Maestro tests verified: 268.
 - Native Raffle adapter tests cover current configuration/source pins, broker-created drafts, selected role ticket presets, reviewed results, and stale draft protection at the native publication boundary.
 - Updater tests cover committed WAL data in the SQLite backup and restoration of all prior code links and unit files after simulated startup failure, without database rollback or Gate/Crew service changes.
 - The updater's `--check-only` passed against the three current source folders. Compilation, changed-script Pyflakes checks, shell syntax and dependency checks passed.
