@@ -16,12 +16,17 @@ def stage(source, destination):
     shutil.copytree(source, destination, ignore=shutil.ignore_patterns(".git", ".venv", ".env", "__pycache__", "*.pyc", "*.sqlite3*", "policy.json", "frontend.env", "telegram.env", "external.env", "backup.json", "restic.env", "recipes.json", "applications.json", "releases", "dist", "uploads", "jobs", "data", "outputs", "checkpoints", "rollback-*", "restic-cache", 'packages','delegates'))
     # copytree preserves mktemp's 0700 mode, which blocks the interface users.
     destination.chmod(0o755)
-    venv.create(destination / ".venv", with_pip=True, symlinks=True)
-    python = destination / ".venv/bin/python"
-    subprocess.run([str(python), "-m", "pip", "install", "--disable-pip-version-check", "-r", str(destination / "requirements-lock.txt")], check=True)
-    env = {**os.environ, "PYTHON": str(python), "PYTHONDONTWRITEBYTECODE": "1"}
-    subprocess.run(["bash", "run_tests.sh"], cwd=destination, env=env, check=True)
-    (destination / "STAGED_OK").write_text("Release " + version + ": isolated installation and tests passed.\n")
+    # Runtime code and its venv are public; restore the caller's private mask afterwards.
+    previous_mask = os.umask(0o022)
+    try:
+        venv.create(destination / ".venv", with_pip=True, symlinks=True)
+        python = destination / ".venv/bin/python"
+        subprocess.run([str(python), "-m", "pip", "install", "--disable-pip-version-check", "-r", str(destination / "requirements-lock.txt")], check=True)
+        env = {**os.environ, "PYTHON": str(python), "PYTHON_BIN": str(python), "PYTHONDONTWRITEBYTECODE": "1"}
+        subprocess.run(["bash", "run_tests.sh"], cwd=destination, env=env, check=True)
+        (destination / "STAGED_OK").write_text("Release " + version + ": isolated installation and tests passed.\n")
+    finally:
+        os.umask(previous_mask)
     return destination
 
 
