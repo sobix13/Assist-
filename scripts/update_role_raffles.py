@@ -158,7 +158,7 @@ def main():
             command('systemctl','start',*UNITS,check=False)
             raise
         print('ROLE_RAFFLE_UPDATE_COMPLETED. Raffle 1.1.0; Verifier 1.2.0; Maestro 1.1.3.',flush=True)
-        print('Open /raffle panel > Settings > Quick setup. Existing qualification roles and bot settings are retained.',flush=True)
+        print('Open /verifier panel > Token holder setup. Configure RPC and the official mint, review roles, then update the member panel. Existing qualification roles and bot settings are retained.',flush=True)
         print('Gate and Crew services were not changed. Backup: '+str(backup),flush=True)
 
 
