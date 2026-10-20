@@ -84,3 +84,5 @@ The delivered test evidence covers actual subprocesses, SQLite/WAL, real encrypt
 ## Verifier 1.2.0 compatibility
 
 Maestro 1.1.3 supports the optional self-transfer wallet verification controls and backup RPC credentials, with pinned native source checks. See [validation](VALIDATION_1.1.3.md). Token holder setup happens in `/verifier panel > Token holder setup`; Raffle remains role-only.
+
+Quiet launch setup: [QUIET_LAUNCH.md](QUIET_LAUNCH.md).
