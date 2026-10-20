@@ -56,6 +56,10 @@ def incident_notifications(snapshot, history, now):
         was_clear = record.get('closed_since') is not None
         record['closed_since'] = None
         record['seen_at'] = now
+        if targets.get(str(row.get('target','')),{}).get('enabled') is False:
+            record['announced_open']=False
+            history[key]=record
+            continue
         if daily_only(row, targets):
             record['announced_open'] = False
             history[key] = record

@@ -34,6 +34,7 @@ def verify(spec):
 
 def validate(spec, cfg):
     module = CONFIG[spec['kind']]
+    if spec['kind'] in ('gate-v1','crew-v1'):cfg=module.upgrade(cfg)
     original = module.fresh() if spec['kind']=='raffle-v1' else module.defaults()
     def shape(value, sample):
         if isinstance(sample, dict):
@@ -57,6 +58,7 @@ def read(spec, connection):
     row=connection.execute(f'SELECT revision,{column} FROM {table} WHERE guild=?',(spec['guild'],)).fetchone()
     module=CONFIG[spec['kind']]
     cfg=json.loads(row[column]) if row else module.fresh() if spec['kind']=='raffle-v1' else module.defaults()
+    if spec['kind'] in ('gate-v1','crew-v1'):cfg=module.upgrade(cfg)
     validate(spec,cfg)
     return cfg,row['revision'] if row else 0
 
@@ -75,7 +77,7 @@ def validate_transition(spec, before, after):
 
 
 def commit(spec, connection, cfg, revision, actor):
-    validate(spec,cfg)
+    cfg=validate(spec,cfg)
     table,column=TABLE[spec['kind']]
     connection.execute('BEGIN IMMEDIATE')
     try:

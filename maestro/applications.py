@@ -92,7 +92,7 @@ class Applications:
                 raise Denied('Verifier version changed. Review and update its versioned Maestro adapter before writing settings.')
             for name,expected in contract['files'].items():
                 p=root/name
-                if p.is_symlink() or file_hash(p)!=expected:raise Denied('Verifier contract changed: '+name+'. Writes are blocked.')
+                if p.is_symlink() or file_hash(p) not in (expected if isinstance(expected,list) else [expected]):raise Denied('Verifier contract changed: '+name+'. Writes are blocked.')
         elif v['kind'] in suite.CONFIG:
             verifier.discord_id(v.get('guild'))
             suite.verify(v)
