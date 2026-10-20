@@ -20,7 +20,7 @@ from maestro.security import read_env
 from scripts.stage_release import stage
 
 UNITS=('ripcars-raffle.service','ripcars-verifier.service','maestro-agent.service','maestro-discord.service','maestro-telegram.service')
-VERSIONS={'raffle':'1.1.0','verifier':'1.2.0','maestro':'1.1.3'}
+VERSIONS={'raffle':'1.1.0','verifier':'1.2.0','maestro':'1.1.4'}
 
 
 def command(*args,check=True,capture=False):
@@ -38,7 +38,7 @@ def validate_sources(sources):
         for name,expected in contract['files'].items():
             data=(sources[key]/name).read_bytes()
             actual=hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest() if key=='raffle' else hashlib.sha256(data).hexdigest()
-            if actual!=expected:raise ValueError('Source does not match the reviewed adapter: '+key+'/'+name)
+            if actual not in (expected if isinstance(expected,list) else [expected]):raise ValueError('Source does not match the reviewed adapter: '+key+'/'+name)
     protocol=(sources['maestro']/'ripcars_coordination.py').read_bytes()
     if any((s/'ripcars_coordination.py').read_bytes()!=protocol for s in sources.values()):
         raise ValueError('Coordination protocol mismatch.')
@@ -157,7 +157,7 @@ def main():
         except BaseException:
             command('systemctl','start',*UNITS,check=False)
             raise
-        print('ROLE_RAFFLE_UPDATE_COMPLETED. Raffle 1.1.0; Verifier 1.2.0; Maestro 1.1.3.',flush=True)
+        print('ROLE_RAFFLE_UPDATE_COMPLETED. Raffle 1.1.0; Verifier 1.2.0; Maestro 1.1.4.',flush=True)
         print('Open /verifier panel > Token holder setup. Configure RPC and the official mint, review roles, then update the member panel. Existing qualification roles and bot settings are retained.',flush=True)
         print('Gate and Crew services were not changed. Backup: '+str(backup),flush=True)
 
