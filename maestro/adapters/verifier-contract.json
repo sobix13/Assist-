@@ -1,24 +1,25 @@
 {
   "repository": "sobix13/Verify-bot",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "files": {
-    "ripcars_verifier/config.py": "3745c2fdbaa169c00925aa853847c2653bbdccb642f7f35edc5970564d8fb420",
-    "ripcars_verifier/storage.py": "c7ec7c32049c66f914a49bcb4baccc4779a73255bdd9a282b8231145cdf14fbe",
-    "ripcars_verifier/member_ui.py": "56d8f195dab2e09eca91908f0053488df777809201d6e4f7b7056b1f11226a4d",
-    "ripcars_verifier/bot.py": "621e87c98bbfeb303f00220b327e4ffd6bfb7d8ea4af6fa2ede829c6dbe9e2bb",
+    "ripcars_verifier/config.py": "50c53f62d6707c68b59146719adcd6c490d2a0cc08ad65093add4308251e590e",
+    "ripcars_verifier/storage.py": "fdeb587ec82fb8e195b7f824360c99a75af92fab64c9a33c3601f6122eb9441c",
+    "ripcars_verifier/member_ui.py": "d3be92eb832741d55162a32b3a63d385e88e70a9aa61af973d82720deb52764c",
+    "ripcars_verifier/bot.py": "53fc9419fc1fd33855621493bed5412110eb700a83a076df377542b9a81f4efd",
     "ripcars_verifier/coordination.py": "5e9db33006acd1a264b3f030fbde36b5073f9ec7bd21f711234698664f05d51d",
-    "ripcars_verifier/engine.py": "7b4d4fd0d7ddfc9e6bf54bdb496d94971b5081c66059c98446cfa3c1114f1efb",
-    "ripcars_verifier/__init__.py": "b9ced49e00767400f479a69d85ab14995a98d42290b782f1022ffe27f0d9aefc",
-    "ripcars_verifier/admin_ui.py": "40ff8a18617c7957834fe72804e8e37439df2e390bbdd330033d2746901bff0a",
-    "ripcars_verifier/auth.py": "1d65ed94dfcf67405e7739062deb6aa3c331834463ef6fb0be6b223cd00263bb",
-    "ripcars_verifier/backups.py": "33e45db8850aa5f377f81ad173b9cd5daba4227c6c4a506e3b041129a195a3a5",
+    "ripcars_verifier/engine.py": "f0f86c3ee452c0f3530203de2550e4d1fa19478953ce5cd942c160fb6ef425ab",
+    "ripcars_verifier/__init__.py": "6b19f8b9e08f205fbfb34b4960110d4a435f85baca2033e3f67e12019b3dd7e0",
+    "ripcars_verifier/admin_ui.py": "f79454bb0fc6c8650ac4d35f843ef6059388ff65b88dd77fe79181f24ca67b24",
+    "ripcars_verifier/auth.py": "8a042eb61012f76c70fbcbeddff0841d3d4427fdbfae52704e2bce975d344445",
+    "ripcars_verifier/backups.py": "142d2a39c00bb54057f3fbabb41621316c1385d3ae2521768de9fd0fab0b1692",
     "ripcars_verifier/chain.py": "e1e9d5c9a13d430dd0d1bfb5a2e2b5a3734a1b50064119ff0ffe7ae97eec0d38",
     "ripcars_verifier/commands.py": "1c284635212e35db1ba9c0738eb662ac734c41d3dd1bb1d015300dfd81f13eda",
     "ripcars_verifier/network.py": "e9d0fbcdb27d71eab9de4887dd7f25879b5cba2242c98396fb956a4d69dd857e",
     "ripcars_verifier/operations.py": "eda744d942a035cb8f08e84590a246abb512671ce7b6deef13e77b4aaa3ddfb8",
     "ripcars_verifier/platform.py": "c3a2767fc94c5d8f58ea535c228760c1a25d9be7038461c527fb9493b025deda",
-    "ripcars_verifier/probes.py": "600d3d9a6a5fdba7528197410ede89d4aa896ff403ea1e60cb33e3a37687cf7d",
-    "ripcars_verifier/web.py": "ed0c8af7ed33964148c582f9ac3e8333939f83c22a8d31b6d1a448d492e1e1e3"
+    "ripcars_verifier/probes.py": "f081b6e0e4f42de89939a617c3d9310426740fc6379dceec52205f8cca4745f6",
+    "ripcars_verifier/web.py": "ed0c8af7ed33964148c582f9ac3e8333939f83c22a8d31b6d1a448d492e1e1e3",
+    "ripcars_verifier/transfer_proof.py": "09890e08e86a4efcf6ef40ec7b2156fd3f7ec7f9754abe02f250b4a66c18172f"
   },
-  "revision": "release-1.1.0"
+  "revision": "release-1.2.0"
 }

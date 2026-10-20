@@ -87,7 +87,7 @@ def safe_url(value, origin_only=False):
 
 
 DEFAULTS = {
-    'enabled': False, 'wallet_linking': False, 'account_linking': False,
+    'enabled': False, 'wallet_linking': False, 'wallet_transfer': False, 'account_linking': False,
     'balance_mode': 'off', 'asset_mode': 'off', 'deposit_mode': 'off',
     'platform_points': False, 'rip_feed': False, 'chain_webhook': False,
     'member_role': 0, 'verification_channel': 0, 'rip_channel': 0, 'log_channel': 0,
@@ -117,9 +117,11 @@ def account_kinds(cfg):
 
 
 def validate(cfg):
+    # Older exported settings keep their existing connection methods.
+    cfg.setdefault('wallet_transfer', False)
     if set(cfg) != set(DEFAULTS):
         raise ConfigurationError('Settings contain unknown or missing fields.')
-    for key in ('enabled','wallet_linking','account_linking','platform_points','rip_feed','chain_webhook'):
+    for key in ('enabled','wallet_linking','wallet_transfer','account_linking','platform_points','rip_feed','chain_webhook'):
         if type(cfg[key]) is not bool:
             raise ConfigurationError(key+' must be true or false.')
     for key in ('balance_mode','asset_mode'):
