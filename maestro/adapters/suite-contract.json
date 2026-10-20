@@ -21,44 +21,45 @@
     }
   },
   "crew": {
-    "revision": "cbc5b62e9d2db37467ecb1f11961981e86ba99d3",
-    "version": "1.0.1",
+    "revision": "quiet-launch-1.1.0",
+    "version": "1.1.0",
     "files": {
       "main.py": "ebe18de2b5297bff7f2512ec1e5cf5a4d43630df",
       "ripcars_coordination.py": "4d0ccc6572b909c3a676e329838c0c2ee52fd6d5",
-      "ripcars_crew/__init__.py": "4a4abf8fb1a106f46bedc793a09a5969749f691d",
-      "ripcars_crew/admin_ui.py": "c59d02ef82e52ed5ba0b20183a960cd550eae694",
-      "ripcars_crew/bot.py": "09a64c9837ca657afc4740c7782eae5cb9dc3ebd",
-      "ripcars_crew/commands.py": "e300fd3cdc712b87268a46f4ef8b7a6c04d357d4",
-      "ripcars_crew/config.py": "a0d91ee1060a179ed0e306cfacf668d2c669db25",
+      "ripcars_crew/__init__.py": "1be70b5d99fdcf87c188cfe0e14bb928c9cbcad9",
+      "ripcars_crew/admin_ui.py": "b6d55c6f95245073659edbd022681321d974d816",
+      "ripcars_crew/bot.py": "e1c91dbb04492c0268e5fbb876e5211173b807b6",
+      "ripcars_crew/commands.py": "70c7a41ee70e797670f12549acf867de9412237c",
+      "ripcars_crew/config.py": "7ae20b958ab445a094e6d874c6d22e8e1ae27520",
       "ripcars_crew/coordination.py": "8509c2a72b9b501ac4c308fea9bd081107107123",
-      "ripcars_crew/detection.py": "8e605eccd8cda14ae0152ada9b130410c5fb7b0b",
-      "ripcars_crew/moderation.py": "084aad50c5d081f18d881818cfef3cac00645c24",
+      "ripcars_crew/detection.py": "5544914a4057998e874bc29be96598f51de8fb3c",
+      "ripcars_crew/moderation.py": "6aa5c1c06a14dc578a061eda65f931fcc50700f9",
       "ripcars_crew/native.py": "6db0c040045e7c573035e08614f0899ce933e498",
       "ripcars_crew/operations.py": "4c58bd8f6d7d931d0462f6d0424c44e5334f93b0",
-      "ripcars_crew/storage.py": "f4a865722a9d1456ef48ed0cae6581d9d0889f30",
+      "ripcars_crew/storage.py": "e96d272031214be9253bccc4eb39d9fad035d994",
       "ripcars_crew/ticket_ui.py": "1b8e9e1037a18cd504eecc98c2b60be4b01c00f6",
-      "ripcars_crew/tickets.py": "4100e1b35d55f02c98afac77c2659243134bf196",
-      "ripcars_crew/ui_common.py": "41d1836dbc74fe5b87083f7ec4f18ada1c9c782c"
+      "ripcars_crew/tickets.py": "fac8879214834133eafc7029df27994e507c8a93",
+      "ripcars_crew/ui_common.py": "41d1836dbc74fe5b87083f7ec4f18ada1c9c782c",
+      "ripcars_crew/channel_ui.py": "5f7db3438c6c4f8edf9116a814588692b6965a6f"
     }
   },
   "gate": {
-    "revision": "f9e1afaa10fbfad3aab343ab8ea17f8cc64fdf63",
-    "version": "1.0.2",
+    "revision": "quiet-launch-1.1.0",
+    "version": "1.1.0",
     "files": {
       "alerts.py": "a01aa528b11a78866e9be97bf8cf6e9e189307c3",
       "captcha.py": "c51c5662de52a3cfd013f704ca2839dd65e37e04",
       "cogs/__init__.py": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
-      "cogs/admin.py": "d6e6e696970ae90be5a2af23038710eca65fb564",
-      "cogs/community.py": "6f66f67518da77f7459258366452fc30dc8e86fd",
-      "cogs/onboarding.py": "1e3fab7965fba8cd2da12a930e70b32cc42942cf",
-      "core.py": "464d35d3ff13bd175d87f8bd2da9baf7f9361820",
-      "db.py": "9a11a4ae87612367ca9af7e52194157429d72eee",
-      "guildutil.py": "20a281c9f80ea0ead7b401ef5b6cb21f8997a1d5",
+      "cogs/admin.py": "cc34425195dde129480c54d329a0f8d850ada0f3",
+      "cogs/community.py": "1193f8a27cf24255b774ebdebcd2c9c2c6e7a8fe",
+      "cogs/onboarding.py": "96b99c880733a951c634c1174b64c64f374b71cf",
+      "core.py": "2c957562abf172c020eb59f3044f028c6410ff92",
+      "db.py": "c70d02275a44e6bb0b2766ec2dc1d325734c1475",
+      "guildutil.py": "fd807cd7338394986b39e52ea85190ec0c5608a6",
       "health.py": "b851112a990971d99e45ac02a95ba74f0ccf02a2",
-      "main.py": "177b8a73eda9c79b01fd4e95e8b80fedc6b1916f",
+      "main.py": "138fb962cb96879be27be68af426e438bd8e044c",
       "ripcars_coordination.py": "4d0ccc6572b909c3a676e329838c0c2ee52fd6d5",
-      "server.py": "a1bbdeae5b93814144f0b891aae33526a7ac5a41"
+      "server.py": "18de70dc04bbd2db632d455bc4e3a27b56a79da6"
     }
   }
 }

@@ -5,11 +5,12 @@ import re
 import unicodedata
 from urllib.parse import urlparse
 
-VERSION = "1.0.2"
+VERSION = "1.1.0"
 OWNER = "ripcars-gate"
 CLAIM_KEYS = ("collectors", "updates", "announcements", "game")
 DEFAULTS = {
-    "enabled": False, "color": 0x800020, "brand": "Ripcars Gate",
+    "enabled": False, "questions_enabled": True, "color": 0x800020, "brand": "Ripcars Gate",
+    "claims_enabled": True, "gcars_enabled": True, "channel_filters_enabled": True,
     "website": "https://app.ripcars.io", "auto_repair": True,
     "captcha_length": 6, "captcha_ttl": 300, "max_attempts": 3,
     "lock_seconds": 600, "answer_ttl": 1800, "ops_channel_id": None,
@@ -86,8 +87,18 @@ def defaults():
     result["role_names"] = {key:name for key,(name,_) in ROLE_SPECS.items()}
     return result
 
+def upgrade(cfg):
+    if not isinstance(cfg,dict):raise ValueError('Settings must be an object.')
+    result=copy.deepcopy(cfg)
+    for key in ('questions_enabled','claims_enabled','gcars_enabled','channel_filters_enabled'):result.setdefault(key,True)
+    return result
+
 def validate(cfg):
-    if not any(q["enabled"] for q in cfg["questions"]):
+    for key in ('questions_enabled','claims_enabled','gcars_enabled','channel_filters_enabled'):
+        if type(cfg.get(key,True)) is not bool:raise ValueError('Feature switches must be on or off.')
+    if type(cfg.get("questions_enabled", True)) is not bool:
+        raise ValueError("Questions must be on or off.")
+    if cfg.get("questions_enabled", True) and not any(q["enabled"] for q in cfg["questions"]):
         raise ValueError("Keep at least one question enabled.")
     if len(cfg["questions"]) > 20 or len({q["id"] for q in cfg["questions"]}) != len(cfg["questions"]):
         raise ValueError("Questions need unique IDs and a maximum of 20 entries.")
@@ -127,8 +138,11 @@ def has_link(text):
 def normalize_answer(value):
     return " ".join(value.split())[:1000]
 
-def eligible(session, now):
-    return bool(session and session["captcha_until"] > now and session["answers"] and not session["locked_until"] > now)
+def eligible(session, now, questions_enabled=True):
+    return bool(session and session["captcha_until"] > now and (not questions_enabled or session["answers"]) and not session["locked_until"] > now)
+
+def welcome_text(cfg):
+    return cfg['texts']['welcome'] if cfg.get('questions_enabled', True) else 'Complete the CAPTCHA to join the garage.'
 
 def patch_matches(actual, expected):
     return all(actual.get(k) == v for k, v in expected.items())

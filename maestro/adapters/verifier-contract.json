@@ -19,7 +19,10 @@
     "ripcars_verifier/platform.py": "c3a2767fc94c5d8f58ea535c228760c1a25d9be7038461c527fb9493b025deda",
     "ripcars_verifier/probes.py": "f081b6e0e4f42de89939a617c3d9310426740fc6379dceec52205f8cca4745f6",
     "ripcars_verifier/web.py": "ed0c8af7ed33964148c582f9ac3e8333939f83c22a8d31b6d1a448d492e1e1e3",
-    "ripcars_verifier/transfer_proof.py": "09890e08e86a4efcf6ef40ec7b2156fd3f7ec7f9754abe02f250b4a66c18172f"
+    "ripcars_verifier/transfer_proof.py": [
+      "09890e08e86a4efcf6ef40ec7b2156fd3f7ec7f9754abe02f250b4a66c18172f",
+      "f4fd13de399d15144b039023eead4c232ac71b492ca3557a4f712a460b759220"
+    ]
   },
   "revision": "release-1.2.0"
 }

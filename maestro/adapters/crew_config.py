@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 
 
 FILTERS = {
+    "channel_content": (True, "delete", 0),
     "words": (True, "warn", 2),
     "blocked_domain": (True, "warn", 5),
     "lookalike": (True, "alert", 0),
@@ -32,6 +33,7 @@ DEFAULTS = {
     "website": "https://app.ripcars.io",
     "moderator_roles": [],
     "member_role": 0,
+    "channel_rules": {},
     "log_channel": 0,
     "guard": {
         "enabled": False, "mode": "protect", "exempt_roles": [], "exempt_channels": [],
@@ -61,6 +63,7 @@ DEFAULTS = {
     },
     "native": {"enabled": False},
     "monitoring": {
+        "activity_enabled": True,
         "activity_days": 35, "store_previews": False, "preview_count": 5,
         "case_retention_days": 180, "error_retention_days": 30,
         "raid_join_count": 10, "raid_window_seconds": 30,
@@ -84,6 +87,24 @@ def defaults():
     return copy.deepcopy(DEFAULTS)
 
 
+CONTENT_TYPES = ('text', 'images', 'videos', 'files', 'links', 'mentions')
+
+
+def upgrade(cfg):
+    if not isinstance(cfg,dict):raise ValueError('Settings must be an object.')
+    cfg=copy.deepcopy(cfg)
+    cfg.setdefault('channel_rules',{})
+    if isinstance(cfg.get('monitoring'),dict):cfg['monitoring'].setdefault('activity_enabled',True)
+    if isinstance(cfg.get('guard'),dict) and isinstance(cfg['guard'].get('filters'),dict):
+        cfg['guard']['filters'].setdefault('channel_content',copy.deepcopy(DEFAULTS['guard']['filters']['channel_content']))
+    return cfg
+
+
+def channel_policy(cfg,channel):
+    rules=cfg.get('channel_rules',{})
+    return rules.get(str(channel.id),rules.get(str(getattr(channel,'parent_id',0)),{}))
+
+
 def get_path(cfg, path):
     value = cfg
     for key in path.split("."):
@@ -92,7 +113,7 @@ def get_path(cfg, path):
 
 
 def set_path(cfg, path, value):
-    result = copy.deepcopy(cfg)
+    result = upgrade(cfg)
     node = result
     keys = path.split(".")
     for key in keys[:-1]:
@@ -132,7 +153,7 @@ def domain(value):
 
 def _same_shape(value, template, path=""):
     if isinstance(template, dict):
-        if not isinstance(value, dict) or set(value) != set(template):
+        if not isinstance(value, dict) or (path!='channel_rules' and set(value) != set(template)):
             raise ValueError(f"{path or 'config'} has missing or unknown fields.")
         for key in template:
             _same_shape(value[key], template[key], f"{path}.{key}".strip("."))
@@ -144,7 +165,14 @@ def _same_shape(value, template, path=""):
 
 
 def validate(cfg):
+    cfg=upgrade(cfg)
     _same_shape(cfg, DEFAULTS)
+    if len(cfg['channel_rules'])>100:raise ValueError('Use at most 100 channel policies.')
+    for channel,policy in cfg['channel_rules'].items():
+        if not isinstance(channel,str) or not channel.isdecimal() or not 0<int(channel)<2**63:
+            raise ValueError('Choose a valid channel.')
+        if not isinstance(policy,dict) or set(policy)!=set(CONTENT_TYPES) or any(type(v) is not bool for v in policy.values()):
+            raise ValueError('Channel content choices must be on or off.')
     for key in ("brand", "bot_name"):
         if not 1 <= len(cfg[key]) <= 80:
             raise ValueError(f"{key}: use 1–80 characters.")
