@@ -1,4 +1,8 @@
-# Maestro 1.1.1
+# Maestro 1.1.2
+
+Current validation and production limits: [VALIDATION_1.1.2.md](VALIDATION_1.1.2.md).
+
+For the coordinated Raffle 1.1.0 / Verifier 1.1.0 upgrade, see [ROLE_RAFFLES.md](ROLE_RAFFLES.md). The updater stages all checks before activation and retains existing configuration.
 
 The private home screen now starts with Server and Discord bots. Gate, Crew, Waffle and Verifier have separate guided dashboards in Telegram and Discord. Routine setup uses labelled fields, choices, previews and confirmations. Existing terminal, files, recovery, access, inventory and backup tools remain under Advanced tools.
 
