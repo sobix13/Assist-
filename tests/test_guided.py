@@ -159,7 +159,7 @@ class GuidedTests(EngineCase):
         job=await self.confirm();self.assertEqual(job['state'],'completed',job['output'])
         current=self.engine.applications.read('crew')['settings']
         self.assertIn('example.org',current['guard']['allowed_domains'])
-        self.assertFalse(current['guard']['enabled']);self.assertEqual(len(current['guard']['filters']),15)
+        self.assertFalse(current['guard']['enabled']);self.assertEqual(len(current['guard']['filters']),16)
         await self.front.handle(callback('g:field:crew:guard.mention_limit'))
         await self.front.handle(update('8'));await self.confirm()
         c=sqlite3.connect(self.specs[1]['database'])
@@ -299,6 +299,7 @@ class GuidedTests(EngineCase):
 
     async def test_guided_navigation_does_not_edit_automatic_alerts_into_the_panel(self):
         self.front.state['started']=True
+        self.engine.store.save_target({**self.engine.store.target('gate'),'enabled':True})
         self.engine.incident('gate','unit_down','failed')
         await self.front.handle(callback('g:server'))
         self.assertIsNone(self.front.panel_message.get())

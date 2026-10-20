@@ -4,6 +4,12 @@ from maestro.notifications import daily_only, incident_notifications, notificati
 
 
 class RealWorldNotificationTests(unittest.TestCase):
+    def test_intentionally_disabled_service_does_not_send_failure_notice(self):
+        row=self.incident('verifier','unit_down','Service inactive')
+        history={}
+        self.assertEqual(self.apply({'open_incidents':[row],'targets':[{'id':'verifier','enabled':False}]},history,100000),[])
+        self.assertFalse(history[row['key']]['announced_open'])
+        self.assertEqual(len(self.apply({'open_incidents':[row],'targets':[{'id':'verifier','enabled':True}]},history,100001)),1)
     def incident(self, target, code, detail):
         return {'key': target + ':' + code, 'target': target, 'code': code, 'detail': detail}
 
