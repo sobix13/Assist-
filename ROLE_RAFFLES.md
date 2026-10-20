@@ -1,8 +1,8 @@
-# Role raffle upgrade: Maestro 1.1.2
+# Role raffle upgrade: Maestro 1.1.3
 
-This adapter release matches Raffle 1.1.0 and Verifier 1.1.0. It pins source hashes, preserves draft revision checks in the native publisher and uses selected role ticket presets for broker-created drafts. New drafts using the shared entry role require result approval by default.
+This adapter release matches Raffle 1.1.0 and Verifier 1.2.0. It pins source hashes, preserves draft revision checks in the native publisher and uses selected role ticket presets for broker-created drafts. New drafts using the shared entry role require result approval by default.
 
-The easiest everyday administration is the native `/raffle panel`: New raffle, Current raffle, Past raffles, Settings. Verifier is independent: wallet qualifications use a 12-hour qualified-member cycle; platform points update initially and then only through an admin-requested batch. Raffle reads neither source. Advanced token/RPC onboarding changes are a later phase.
+The easiest everyday administration is the native `/raffle panel`: New raffle, Current raffle, Past raffles, Settings. Verifier is independent: wallet qualifications use a 12-hour qualified-member cycle; platform points update initially and then only through an admin-requested batch. Raffle reads neither source. Verifier 1.2.0 adds an optional self-transfer proof and a guided Token holder setup section. RPC credentials use its targeted VPS tool.
 
 ## Existing installation
 

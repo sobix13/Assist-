@@ -1,12 +1,12 @@
-# Maestro 1.1.2
+# Maestro 1.1.3
 
-Current validation and production limits: [VALIDATION_1.1.2.md](VALIDATION_1.1.2.md).
+Current validation and production limits: [VALIDATION_1.1.3.md](VALIDATION_1.1.3.md).
 
-For the coordinated Raffle 1.1.0 / Verifier 1.1.0 upgrade, see [ROLE_RAFFLES.md](ROLE_RAFFLES.md). The updater stages all checks before activation and retains existing configuration.
+For the coordinated Raffle 1.1.0 / Verifier 1.2.0 upgrade, see [ROLE_RAFFLES.md](ROLE_RAFFLES.md). The updater stages all checks before activation and retains existing configuration.
 
 The private home screen now starts with Server and Discord bots. Gate, Crew, Waffle and Verifier have separate guided dashboards in Telegram and Discord. Routine setup uses labelled fields, choices, previews and confirmations. Existing terminal, files, recovery, access, inventory and backup tools remain under Advanced tools.
 
-Read the [Persian operator guide](GUIDED_FA.md) for the button paths, required team inputs and the difference between saved settings and published Discord panels. See [the change review](AUDIT_1.1.0.md) for fixes, tests and live-server prerequisites. Run `python3 scripts/build_release.py` to create matching source packages under `releases/1.1.1`; generated archives are excluded from Git.
+Read the [Persian operator guide](GUIDED_FA.md) for the button paths, required team inputs and the difference between saved settings and published Discord panels. See [the change review](AUDIT_1.1.0.md) for fixes, tests and live-server prerequisites. Run `python3 scripts/build_release.py` to create matching source packages under `releases/1.1.3`; generated archives are excluded from Git.
 
 Maestro is a personal, deterministic VPS operations assistant. It has independent Discord and Telegram interfaces, one shared execution broker, and no AI dependency. It works with services beyond the Rip Cars projects.
 
@@ -80,3 +80,7 @@ sudo env PYTHON="$PWD/.venv/bin/python" bash run_tests.sh
 Use Python 3.12 and install Restic for the real snapshot/restore tests. The installer creates a fresh virtual environment and runs the checks before activating a release. `RESTIC_TEST_BINARY` can select a test executable.
 
 The delivered test evidence covers actual subprocesses, SQLite/WAL, real encrypted Restic restore, loopback HTTP Telegram/Discord fixtures, and mutual TLS. It does not claim access to the owner's VPS or production chat sessions. Unknown database engines, provider snapshots, and arbitrary remote side effects need their own adapters; a backup does not create universal undo.
+
+## Verifier 1.2.0 compatibility
+
+Maestro 1.1.3 supports the optional self-transfer wallet verification controls and backup RPC credentials, with pinned native source checks. See [validation](VALIDATION_1.1.3.md). Token holder setup happens in `/verifier panel > Token holder setup`; Raffle remains role-only.
