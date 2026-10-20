@@ -65,7 +65,7 @@ class ApplicationTests(EngineCase):
         await super().asyncSetUp()
         self.use_fake_probes();self.engine.applications.probes=self.engine.probes
         self.source=self.folder/'verifier';self.source.mkdir()
-        with zipfile.ZipFile(Path(__file__).parent/'fixtures/verifier-1.0.1-contract.zip') as z:z.extractall(self.source)
+        with zipfile.ZipFile(Path(__file__).parent/'fixtures/verifier-1.1.0-contract.zip') as z:z.extractall(self.source)
         self.db=self.folder/'verifier.sqlite3'
         c=sqlite3.connect(self.db)
         c.executescript("CREATE TABLE meta(key TEXT PRIMARY KEY,value TEXT); INSERT INTO meta VALUES('schema_version','1'); CREATE TABLE settings(guild INTEGER PRIMARY KEY,revision INTEGER,value TEXT); CREATE TABLE ledger(guild INTEGER,event_id TEXT); CREATE TABLE jobs(guild INTEGER,next_run REAL); CREATE TABLE audit(id INTEGER PRIMARY KEY,guild INTEGER,actor INTEGER,action TEXT,detail TEXT,created REAL);")
@@ -95,7 +95,7 @@ class ApplicationTests(EngineCase):
     async def test_settings_validate_live_discord_before_review_then_commit_with_audit(self):
         review=await self.request(changes={'sync_seconds':7200})
         self.assertTrue(self.discord.calls);self.assertTrue(all(x[0]=='GET' for x in self.discord.calls))
-        self.assertEqual(self.engine.applications.read('verifier')['settings']['sync_seconds'],86400)
+        self.assertEqual(self.engine.applications.read('verifier')['settings']['sync_seconds'],43200)
         job=await self.run_request(review);self.assertEqual(job['state'],'completed')
         self.assertEqual(self.engine.applications.read('verifier')['settings']['sync_seconds'],7200)
         c=sqlite3.connect(self.db);self.assertEqual(c.execute('SELECT action FROM audit').fetchone()[0],'maestro_settings');c.close()
@@ -114,7 +114,7 @@ class ApplicationTests(EngineCase):
         review=await self.request(changes={'sync_seconds':7200})
         c=sqlite3.connect(self.db);c.execute('UPDATE settings SET revision=revision+1');c.commit();c.close()
         with self.assertRaises(Denied):await self.run_request(review)
-        self.assertEqual(self.engine.applications.read('verifier')['settings']['sync_seconds'],86400)
+        self.assertEqual(self.engine.applications.read('verifier')['settings']['sync_seconds'],43200)
 
     async def test_live_discord_missing_permissions_blocks_provision(self):
         self.discord.roles[-1]['permissions']='0'
@@ -130,7 +130,9 @@ class ApplicationTests(EngineCase):
         self.assertTrue(any(x['id']==str(MEMBER) and int(x['allow'])&HISTORY for x in public['permission_overwrites']))
         self.assertTrue(any(x['id']==str(MEMBER) and int(x['deny'])&VIEW for x in private['permission_overwrites']))
         message=self.discord.messages[str(cfg['public_message'])]
-        self.assertEqual(message['components'][0]['components'][0]['custom_id'],'rcv:wallet:v1')
+        buttons={button['custom_id'] for row in message['components'] for button in row['components']}
+        self.assertIn('rcv:status:v1',buttons)
+        self.assertNotIn('rcv:wallet:v1',buttons)
         self.assertEqual({x['owner'] for x in protocol.inspect(self.registry,GUILD)['resources']},{'bot:'+BOT})
         self.assertFalse(protocol.inspect(self.registry,GUILD)['leases'])
 
@@ -172,13 +174,13 @@ class ApplicationTests(EngineCase):
     async def test_failed_settings_postcheck_restores_settings_without_replacing_database(self):
         self.engine.applications.probes.service=AsyncMock(side_effect=[{'ok':False},{'ok':True}])
         job=await self.run_request(await self.request(changes={'sync_seconds':7200}))
-        self.assertEqual(job['state'],'rolled_back');self.assertEqual(self.engine.applications.read('verifier')['settings']['sync_seconds'],86400)
+        self.assertEqual(job['state'],'rolled_back');self.assertEqual(self.engine.applications.read('verifier')['settings']['sync_seconds'],43200)
 
     async def test_postcheck_exception_restores_verifier_settings_and_rechecks_health(self):
         self.engine.applications.probes.service=AsyncMock(side_effect=[RuntimeError('lost probe'),{'ok':True}])
         job=await self.run_request(await self.request(changes={'sync_seconds':7200}))
         self.assertEqual(job['state'],'rolled_back')
-        self.assertEqual(self.engine.applications.read('verifier')['settings']['sync_seconds'],86400)
+        self.assertEqual(self.engine.applications.read('verifier')['settings']['sync_seconds'],43200)
 
     async def test_json_reload_failure_restores_and_reloads_previous_settings(self):
         path=self.folder/'config.json';path.write_text('{"hours":24}')

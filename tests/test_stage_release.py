@@ -1,3 +1,4 @@
+import os
 import stat
 import tempfile
 import unittest
@@ -8,6 +9,21 @@ from scripts.stage_release import stage
 
 
 class StageReleaseTests(unittest.TestCase):
+    def test_private_caller_mask_does_not_make_venv_inaccessible(self):
+        with tempfile.TemporaryDirectory() as folder:
+            source=Path(folder)/'source';source.mkdir()
+            (source/'VERSION').write_text('1.1.2')
+            destination=Path(folder)/'release'
+            def create(path,**kwargs):
+                path.mkdir();(path/'bin').mkdir()
+            old=os.umask(0o077)
+            try:
+                with patch('scripts.stage_release.venv.create',side_effect=create),patch('scripts.stage_release.subprocess.run'):
+                    stage(source,destination)
+                self.assertEqual(stat.S_IMODE((destination/'.venv/bin').stat().st_mode),0o755)
+                self.assertEqual(os.umask(0o077),0o077)
+            finally:os.umask(old)
+
     def test_private_source_stages_code_accessible_to_interface_users(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

@@ -18,6 +18,7 @@ async def main():
         from maestro.applications import connect
         from maestro import suite
         cfg,revision=await case.bot.db.settings(1)
+        cfg['max_active']=2  # This test intentionally exercises two legacy publications.
         native_spec={'kind':'raffle-v1','guild':1}
         c=connect(case.bot.db.path,False)
         suite.commit(native_spec,c,cfg,revision,'telegram:313342234');c.close()

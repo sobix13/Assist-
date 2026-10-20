@@ -22,6 +22,23 @@ from .test_telegram_witness import LocalBotAPI, TELEGRAM, TELEGRAM_ID, BotAPI, T
 
 
 class GuidedTests(EngineCase):
+    async def test_role_raffle_bridge_uses_selected_presets_and_reviewed_results(self):
+        spec=self.engine.applications.spec('raffle')
+        cfg=raffle_config.fresh()
+        cfg.update(member_role=100,raffle_role=200,role_tickets={'100':1,'300':3,'400':10})
+        c=sqlite3.connect(spec['database'])
+        c.execute('INSERT OR REPLACE INTO settings VALUES(?,?,1)',(spec['guild'],json.dumps(cfg)));c.commit();c.close()
+        draft=copy.deepcopy(cfg['templates']['general'])
+        draft['prize']='A collectible';draft['rules']['any_roles']=[100,300]
+        payload={'adapter':'raffle','revision':1,'action':'raffle_create','changes':{'category':'general',**draft}}
+        plan=self.engine.applications.plan(payload)
+        self.assertEqual(plan['raffle']['spec']['rules']['weights'],{'100':1,'300':3})
+        self.assertEqual(plan['raffle']['spec']['rules']['weight_mode'],'tickets')
+        result=await self.engine.applications.apply(plan,TELEGRAM)
+        c=sqlite3.connect(spec['database'])
+        mode=c.execute('SELECT result_mode FROM raffles WHERE id=?',(result['raffle_id'],)).fetchone()[0];c.close()
+        self.assertEqual(mode,'review')
+
     async def asyncSetUp(self):
         await super().asyncSetUp()
         self.engine.policy.owners.add(TELEGRAM)
@@ -41,7 +58,7 @@ class GuidedTests(EngineCase):
             Path(spec['env_file']).write_text('DISCORD_TOKEN=fixture-token-for-own-bot\nGUILD_ID=123456789\n');Path(spec['env_file']).chmod(0o600)
             self.specs.append(spec)
         root=source/'verifier';root.mkdir()
-        with zipfile.ZipFile(Path(__file__).parent/'fixtures/verifier-1.0.1-contract.zip') as z:z.extractall(root)
+        with zipfile.ZipFile(Path(__file__).parent/'fixtures/verifier-1.1.0-contract.zip') as z:z.extractall(root)
         spec={'id':'verifier','target':'verifier','kind':'verifier-v1','guild':123456789,'install':str(root),
               'database':str(self.folder/'verifier.sqlite3'),'env_file':str(self.folder/'verifier.env'),'coordination_path':str(self.folder/'coordination.sqlite3')}
         c=sqlite3.connect(spec['database']);c.executescript("CREATE TABLE meta(key TEXT,value TEXT);INSERT INTO meta VALUES('schema_version','1');CREATE TABLE settings(guild INTEGER PRIMARY KEY,revision INTEGER,value TEXT);CREATE TABLE ledger(guild INTEGER,event_id TEXT);CREATE TABLE jobs(guild INTEGER,next_run REAL);CREATE TABLE audit(id INTEGER PRIMARY KEY,guild INTEGER,actor INTEGER,action TEXT,detail TEXT,created REAL);");c.close()
@@ -71,6 +88,39 @@ class GuidedTests(EngineCase):
         task=self.engine.jobs.get(jobs[0]['id'])
         if task:await task
         return self.engine.job(TELEGRAM,jobs[0]['id'])
+
+    async def test_gate_activation_cannot_bypass_native_setup_checks(self):
+        current=self.engine.applications.read('gate')
+        with self.assertRaisesRegex(Denied,'/gate panel'):
+            self.engine.applications.plan({'adapter':'gate','revision':current['revision'],'changes':{'enabled':True}})
+        self.assertFalse(self.engine.applications.read('gate')['settings']['enabled'])
+
+    async def test_native_activation_guard_also_protects_direct_commit(self):
+        from maestro.applications import connect
+        spec=self.engine.applications.spec('gate');current=self.engine.applications.read('gate')
+        cfg=copy.deepcopy(current['settings']);cfg['enabled']=True
+        c=connect(spec['database'],False)
+        try:
+            with self.assertRaisesRegex(Denied,'/gate panel'):
+                suite.commit(spec,c,cfg,current['revision'],TELEGRAM)
+        finally:c.close()
+        self.assertFalse(self.engine.applications.read('gate')['settings']['enabled'])
+
+    async def test_guided_gate_activation_explains_native_health_check(self):
+        await self.front.handle(callback('g:enable:gate'))
+        self.assertIn('/gate panel',self.message()['text'])
+        self.assertEqual(await self.engine.dispatch(TELEGRAM,'jobs',{}),[])
+
+    async def test_crew_active_config_needs_native_check_but_pause_remains_available(self):
+        c=sqlite3.connect(self.specs[1]['database'])
+        cfg=suite.crew_config.defaults();cfg['guard']['enabled']=True;cfg['guard']['mode']='observe'
+        c.execute('INSERT INTO crew_settings VALUES(?,?,?,?)',(123456789,1,json.dumps(cfg),0));c.commit();c.close()
+        cfg['guard']['mode']='protect'
+        with self.assertRaisesRegex(Denied,'/crew panel'):
+            self.engine.applications.plan({'adapter':'crew','revision':1,'changes':{'guard':cfg['guard']}})
+        cfg['guard']['mode']='observe';cfg['guard']['enabled']=False
+        plan=self.engine.applications.plan({'adapter':'crew','revision':1,'changes':{'guard':cfg['guard']}})
+        self.assertFalse(plan['settings']['guard']['enabled'])
 
     async def test_home_is_small_and_all_old_sections_remain_accessible(self):
         await self.front.handle(update('/start'))
@@ -257,12 +307,16 @@ class GuidedTests(EngineCase):
 
     async def test_connection_fields_report_required_values_only_for_enabled_sources(self):
         rows=await self.engine.dispatch(TELEGRAM,'connections',{'adapter':'verifier'})
-        self.assertEqual([r['field'] for r in rows if r['required']],['PUBLIC_URL'])
+        self.assertEqual([r['field'] for r in rows if r['required']],[])
         cfg=verifier_config.defaults();cfg.update(asset_mode='das',platform_points=True)
         c=sqlite3.connect(self.specs[3]['database']);c.execute('INSERT INTO settings VALUES(?,1,?)',(123456789,json.dumps(cfg)));c.commit();c.close()
         rows=await self.engine.dispatch(TELEGRAM,'connections',{'adapter':'verifier'})
         required={r['field'] for r in rows if r['required']}
-        self.assertEqual(required,{'PUBLIC_URL','DAS_URL','PLATFORM_API_URL','PLATFORM_API_KEY'})
+        self.assertEqual(required,{'DAS_URL','PLATFORM_API_URL','PLATFORM_API_KEY'})
+        cfg['wallet_linking']=True
+        c=sqlite3.connect(self.specs[3]['database']);c.execute('UPDATE settings SET value=? WHERE guild=?',(json.dumps(cfg),123456789));c.commit();c.close()
+        rows=await self.engine.dispatch(TELEGRAM,'connections',{'adapter':'verifier'})
+        self.assertTrue(next(r['required'] for r in rows if r['field']=='PUBLIC_URL'))
 
     async def test_api_inputs_never_leak_after_frontend_restart_or_failed_job(self):
         value='private-api-key-for-persistent-review'
